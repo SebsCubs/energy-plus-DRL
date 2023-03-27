@@ -1,0 +1,38 @@
+*.a
+*.d
+*.dll
+*.exe
+*.gcda
+*.ilk
+*.lib
+*.log
+*.map
+*.o
+*.o-*
+*.obj
+*.optrpt
+*.orig
+*.pdb
+*.res
+*.so
+*.so.*
+*~
+.directory
+.DS_Store
+
+#ignore outputs
+_OLD
+out
+*.log
+example_usage
+*.egg-info
+
+#ignore csv datasets
+Dataframes
+*.csv
+
+# now that we have python, ignore some things
+**.pyc
+venv
+**/*.png
+Models/
