@@ -72,7 +72,7 @@ tc_actuators = {
     #'air_loop_fan_mass_flow_actuator' : ('Fan','Fan Air Mass Flow Rate','FanSystemModel ConstantVolume')  # kg/s
 }
 # -- Simulation Params --
-calling_point_for_callback_fxn = EmsPy.available_calling_points[12]  # 6-16 valid for timestep loop during simulation
+calling_point_for_callback_fxn = EmsPy.available_calling_points[7]  # 6-16 valid for timestep loop during simulation
 sim_timesteps = 6  # every 60 / sim_timestep minutes (e.g 10 minutes per timestep)
 
 # -- Create Building Energy Simulation Instance --
@@ -119,13 +119,11 @@ class Agent:
     def observation_function(self):
         # -- FETCH/UPDATE SIMULATION DATA --
         self.time = self.bca.get_ems_data(['t_datetimes'])
-        current_time = self.bca.get_ems_data(['t_cumulative_time'])
         #check that self.time is less than current time
         if self.time < datetime.datetime.now():
             # Get data from simulation at current timestep (and calling point) using ToC names
             var_data = self.bca.get_ems_data(list(self.bca.tc_var.keys()))
             weather_data = self.bca.get_ems_data(list(self.bca.tc_weather.keys()), return_dict=True)
-
             # get specific values from MdpManager based on name
             self.zn0_temp = var_data[0]  
             self.fan_mass_flow = var_data[1]
@@ -159,7 +157,10 @@ class Agent:
 
 
 #  --- Create agent instance ---
+
 my_agent = Agent(sim)
+
+
 
 # --- Set your callback function (observation and/or actuation) function for a given calling point ---
 sim.set_calling_point_and_callback_function(
@@ -172,9 +173,12 @@ sim.set_calling_point_and_callback_function(
 )
 
 # -- RUN BUILDING SIMULATION --
+
 sim.run_env(ep_weather_path)
 sim.reset_state()  # reset when done
 
+
+   
 # -- Sample Output Data --
 output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)
 

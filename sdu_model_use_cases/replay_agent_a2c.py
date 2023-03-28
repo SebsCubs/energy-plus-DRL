@@ -30,7 +30,7 @@ idf_file_name = r'C:\Projects\SDU\Thesis\pyenergyplus\BEMFiles\sdu_double_heatin
 # Weather Path
 ep_weather_path = r'C:\Projects\SDU\Thesis\pyenergyplus\BEMFiles\DNK_Jan_Feb.epw'  # EPW weather file
 # Output .csv Path (optional)
-cvs_output_path = r'C:\Projects\SDU\Thesis\pyenergyplus\Dataframes\dataframes_output_test.csv'
+cvs_output_path = r'C:\Projects\SDU\Thesis\pyenergyplus\Dataframes\dataframes_output_train.csv'
 
 # STATE SPACE (& Auxiliary Simulation Data)
 
@@ -65,24 +65,14 @@ tc_weather = {
 # ACTION SPACE
 tc_actuators = {
     # HVAC Control Setpoints
-    'fan_mass_flow_act': ('Fan', 'Fan Air Mass Flow Rate', 'FANSYSTEMMODEL VAV'),  # kg/s
+    #'fan_mass_flow_act': ('Fan', 'Fan Air Mass Flow Rate', 'FANSYSTEMMODEL VAV'),  # kg/s
 }
 
 # -- Simulation Params --
-calling_point_for_callback_fxn = EmsPy.available_calling_points[12]  # 6-16 valid for timestep loop during simulation
+calling_point_for_callback_fxn = EmsPy.available_calling_points[7]  # 6-16 valid for timestep loop during simulation, check documentation as this is VERY unpredictable
 sim_timesteps = 6  # every 60 / sim_timestep minutes (e.g 10 minutes per timestep)
 
-# -- Create Building Energy Simulation Instance --
-sim = BcaEnv(
-    ep_path=ep_path,
-    ep_idf_to_run=idf_file_name,
-    timesteps=sim_timesteps,
-    tc_vars=tc_vars,
-    tc_intvars=tc_intvars,
-    tc_meters=tc_meters,
-    tc_actuator=tc_actuators,
-    tc_weather=tc_weather
-)
+
 
 
 def A2CModels(input_shape, action_space, lr):
@@ -135,7 +125,7 @@ class Energyplus_Agent:
         # Instantiate games and plot memory
         self.states, self.actions, self.rewards = [], [], []
         self.scores, self.episodes, self.average = [], [], []
-        self.EPISODES = 100
+        self.EPISODES = 10
         self.max_average = -99999999999 #To save the best model
         self.Save_Path = 'Models'
 
@@ -163,13 +153,13 @@ class Energyplus_Agent:
     def observation_function(self):
         # -- FETCH/UPDATE SIMULATION DATA --
         self.time = self.bca.get_ems_data(['t_datetimes'])
-        
         #check that self.time is less than current time
         if self.time < datetime.datetime.now():
             # Get data from simulation at current timestep (and calling point) using ToC names
             var_data = self.bca.get_ems_data(list(self.bca.tc_var.keys()))
             weather_data = self.bca.get_ems_data(list(self.bca.tc_weather.keys()), return_dict=True)
 
+            callbacks.append(1)
 
             # get specific values from MdpManager based on name
             self.zn0_temp = var_data[0]  
@@ -184,9 +174,6 @@ class Energyplus_Agent:
 
             # -- UPDATE STATE & REWARD ---
             self.state = self.get_state(var_data,weather_data)
-
-            
-
             self.step_reward = self.reward_function()
                 
             # Initialize previous state for first step
@@ -208,16 +195,12 @@ class Energyplus_Agent:
         # In energyplus, the max flow rate is depending in the mass flow rate and a density depending of 
         # the altitude and 20 deg C -> a safe bet is dnsity = 1.204 kg/m3
         # The max flow rate of the fan is autosized to 1.81 m3/s
-        # The mass flow rate is in kg/s, so the max flow rate is 1.81*1.204 = 2.18 kg/s
-        
-        
+        # The mass flow rate is in kg/s, so the max flow rate is 1.81*1.204 = 2.18 kg/s        
         #Agent action
         action = self.act(self.state)         
         #Map the action to the fan mass flow rate
         fan_flow_rate = action*(2.18/10)
         self.previous_action = action
-
-
         """
         # print reporting       
         current_time = self.bca.get_ems_data(['t_cumulative_time']) 
@@ -288,8 +271,6 @@ class Energyplus_Agent:
         running_add = 0
         discounted_r = np.zeros_like(reward)
         for i in reversed(range(0,len(reward))):
-            if reward[i] != 0: # reset the sum, since this was a game boundary (pong specific!)
-                running_add = 0
             running_add = running_add * gamma + reward[i]
             discounted_r[i] = running_add
 
@@ -352,36 +333,55 @@ class Energyplus_Agent:
 
 
 
-
 if __name__ == "__main__":
-    #  --- Create agent instance ---
-    my_agent = Energyplus_Agent(sim)
-    # --- Set your callback function (observation and/or actuation) function for a given calling point ---
+    #  --- Create agent instance --
+    callbacks = []
+    episode_rewards = []
+    # -- Create Building Energy Simulation Instance --
+    sim = BcaEnv(
+        ep_path=ep_path,
+        ep_idf_to_run=idf_file_name,
+        timesteps=sim_timesteps,
+        tc_vars=tc_vars,
+        tc_intvars=tc_intvars,
+        tc_meters=tc_meters,
+        tc_actuator=tc_actuators,
+        tc_weather=tc_weather
+    )
+    my_agent = Energyplus_Agent(sim)  
+
     sim.set_calling_point_and_callback_function(
         calling_point=calling_point_for_callback_fxn,
         observation_function=my_agent.observation_function,  # optional function
-        actuation_function= my_agent.actuation_function,  # optional function
+        actuation_function= None, #my_agent.actuation_function,  # optional function
         update_state=True,  # use this callback to update the EMS state
         update_observation_frequency=1,  # linked to observation update
         update_actuation_frequency=1  # linked to actuation update
     )
-    # -- RUN BUILDING SIMULATION --
-    episode_rewards = []
 
+    # -- RUN BUILDING SIMULATION --
     end_time = time.time()
     print("Time to initialize: ", end_time - start_time)
 
     for ep in range(my_agent.EPISODES):
         start_time = time.time()
+
         sim.run_env(ep_weather_path)    
-        episode_rewards.append(my_agent.episode_reward)
-        print("Episode:", (ep+1), "Reward:", my_agent.episode_reward)
+        episode_rewards.append(np.sum(my_agent.rewards))
+        print("Episode:", (ep+1), "Reward:", episode_rewards[-1])
         end_time = time.time()
         print("Time to run episode: ", end_time - start_time)
 
         start_time = time.time()
-        average = my_agent.evaluate_model(my_agent.episode_reward, (ep+1)) # evaluate the model
+        average = my_agent.evaluate_model(episode_rewards[-1], (ep+1)) # evaluate the model
+        print("No. of callbacks: ", len(callbacks), "Empsy callbacks: ", sim.callback_current_count)
         my_agent.replay() # train the network      
         sim.reset_state()  # reset when done
+        callbacks = []
+        # -- Sample Output Data --
+        output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)
+
+
+
         end_time = time.time()
         print("Time to evaluate and train: ", end_time - start_time)
