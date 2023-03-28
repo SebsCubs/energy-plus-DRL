@@ -71,7 +71,7 @@ class A2C_agent:
         # Instantiate games and plot memory
         self.states, self.actions, self.rewards = [], [], []
         self.scores, self.episodes, self.average = [], [], []
-        self.EPISODES = 10
+        self.EPISODES = 100
         self.max_average = -99999999999 #To save the best model
         self.Save_Path = 'Models'
 
