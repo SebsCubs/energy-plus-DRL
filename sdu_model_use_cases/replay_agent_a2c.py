@@ -4,8 +4,9 @@ Author: Sebastian Cubides
 """
 import sys
 
-sys.path.insert(0, 'C:\EnergyPlusV22-1-0')
+sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0')
 import os
+import tkinter
 from pyenergyplus import api #Importing from folder, a warning may show
 from pyenergyplus.api import EnergyPlusAPI
 import numpy as np
@@ -26,11 +27,11 @@ start_time = time.time()
 # * E+ Download Path *
 ep_path = 'C:\EnergyPlusV22-1-0'  # path to E+ on system
 # IDF File / Modification Paths
-idf_file_name = r'C:\Projects\SDU\Thesis\pyenergyplus\BEMFiles\sdu_double_heating.idf'  # building energy model (BEM) IDF file
+idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating.idf'  # building energy model (BEM) IDF file
 # Weather Path
-ep_weather_path = r'C:\Projects\SDU\Thesis\pyenergyplus\BEMFiles\DNK_Jan_Feb.epw'  # EPW weather file
+ep_weather_path = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/DNK_Jan_Feb.epw'  # EPW weather file
 # Output .csv Path (optional)
-cvs_output_path = r'C:\Projects\SDU\Thesis\pyenergyplus\Dataframes\dataframes_output_train.csv'
+cvs_output_path = r'/home/jun/HVAC/energy-plus-DRL/Dataframes/dataframes_output_train.csv'
 
 
 
@@ -71,7 +72,7 @@ class A2C_agent:
         # Instantiate games and plot memory
         self.states, self.actions, self.rewards = [], [], []
         self.scores, self.episodes, self.average = [], [], []
-        self.EPISODES = 100
+        self.EPISODES = 1000
         self.max_average = -99999999999 #To save the best model
         self.Save_Path = 'Models'
 
@@ -393,3 +394,5 @@ if __name__ == "__main__":
 
         end_time = time.time()
         print("Time to evaluate and train: ", end_time - start_time)
+        print("Waiting for one second")
+        time.sleep(1)
