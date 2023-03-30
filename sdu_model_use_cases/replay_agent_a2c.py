@@ -3,10 +3,12 @@ Author: Sebastian Cubides
 
 """
 import sys
-
+from pathlib import Path
 sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0')
 import os
 import tkinter
+import shutil
+
 from pyenergyplus import api #Importing from folder, a warning may show
 from pyenergyplus.api import EnergyPlusAPI
 import numpy as np
@@ -25,7 +27,7 @@ start_time = time.time()
 
 # -- FILE PATHS --
 # * E+ Download Path *
-ep_path = 'C:\EnergyPlusV22-1-0'  # path to E+ on system
+ep_path = '/usr/local/EnergyPlus-22-1-0'  # path to E+ on system
 # IDF File / Modification Paths
 idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating.idf'  # building energy model (BEM) IDF file
 # Weather Path
@@ -363,6 +365,20 @@ class Energyplus_manager:
    
 
 
+
+def is_file_in_use(file_path):
+    path = Path(file_path)
+    
+    if not path.exists():
+        raise FileNotFoundError
+    
+    try:
+        path.rename(path)
+    except PermissionError:
+        return True
+    else:
+        return False
+
 if __name__ == "__main__":
     #  --- Create agent instance --
     callbacks = []
@@ -389,10 +405,12 @@ if __name__ == "__main__":
         callbacks = []
         # -- Sample Output Data --
         output_dfs = eplus_manager.sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)
-        del eplus_manager #delete object
-        
+        #del eplus_manager #delete object
+        out_path = Path('out')
+        if out_path.exists() and out_path.is_dir():
+            shutil.rmtree(out_path)
 
         end_time = time.time()
         print("Time to evaluate and train: ", end_time - start_time)
-        print("Waiting for one second")
-        time.sleep(1)
+
+            
