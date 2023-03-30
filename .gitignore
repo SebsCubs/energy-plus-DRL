@@ -26,7 +26,8 @@ out
 *.log
 example_usage
 *.egg-info
-
+*.h5
+Models
 #ignore csv datasets
 Dataframes
 *.csv
@@ -35,4 +36,3 @@ Dataframes
 **.pyc
 venv
 **/*.png
-Models/
