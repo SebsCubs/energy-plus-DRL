@@ -871,6 +871,7 @@ class EmsPy:
                                                                                self.idf_file])  # cmd line args
         if self.simulation_success != 0:
             print('\n* * * Simulation FAILED * * *\n')
+            return -1
         # simulation successful
         else:
             print('\n* * * Simulation Done * * *')
@@ -880,3 +881,4 @@ class EmsPy:
                 self._create_default_dataframes()
                 print('* * * Default DF Creation Done * * *')
             self._create_custom_dataframes()
+            return 1

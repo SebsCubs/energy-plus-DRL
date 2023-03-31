@@ -391,21 +391,22 @@ if __name__ == "__main__":
     for ep in range(a2c_agent.EPISODES):
         start_time = time.time()
         eplus_manager = Energyplus_manager(a2c_agent)  
-        eplus_manager.sim.run_env(ep_weather_path)    
-        episode_rewards.append(np.sum(a2c_agent.rewards))
+        sim_return = eplus_manager.sim.run_env(ep_weather_path)  
 
-        print("Episode:", (ep+1), "Reward:", episode_rewards[-1])
         end_time = time.time()
-        print("Time to run episode: ", end_time - start_time)
+        print("Time to run episode: ", end_time - start_time) 
 
-        start_time = time.time()
-        average = a2c_agent.evaluate_model(episode_rewards[-1], (ep+1)) # evaluate the model
-        print("No. of callbacks: ", len(callbacks), "Empsy callbacks: ", eplus_manager.sim.callback_current_count)
-        a2c_agent.replay() # train the network      
-        callbacks = []
-        # -- Sample Output Data --
-        output_dfs = eplus_manager.sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)
-        #del eplus_manager #delete object
+        if(sim_return == 1): 
+            episode_rewards.append(np.sum(a2c_agent.rewards))
+            print("Episode:", (ep+1), "Reward:", episode_rewards[-1])
+            start_time = time.time()
+            average = a2c_agent.evaluate_model(episode_rewards[-1], (ep+1)) # evaluate the model
+            print("No. of callbacks: ", len(callbacks), "Empsy callbacks: ", eplus_manager.sim.callback_current_count)
+            a2c_agent.replay() # train the network      
+            callbacks = []
+            # -- Sample Output Data --
+            output_dfs = eplus_manager.sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)
+            #del eplus_manager #delete object
         out_path = Path('out')
         if out_path.exists() and out_path.is_dir():
             shutil.rmtree(out_path)
