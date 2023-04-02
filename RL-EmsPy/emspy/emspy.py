@@ -875,6 +875,7 @@ class EmsPy:
         # simulation successful
         else:
             print('\n* * * Simulation Done * * *')
+            self.api.runtime.clear_callbacks() #Cleanup after succesfull run
             self._post_process_data()
             # create default and custom ems pandas df's after simulation complete
             if self.default_dfs_tracked:
