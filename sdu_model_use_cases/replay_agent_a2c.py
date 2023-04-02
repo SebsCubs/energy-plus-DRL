@@ -2,25 +2,14 @@
 Author: Sebastian Cubides
 
 """
-import sys
+from a2c_agent import A2C_agent
 from pathlib import Path
-sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0')
-import os
-import tkinter
 import shutil
-
-from pyenergyplus import api #Importing from folder, a warning may show
-from pyenergyplus.api import EnergyPlusAPI
+import os
 import numpy as np
 from emspy import EmsPy, BcaEnv
-import pylab
 import datetime
 import time
-import matplotlib.pyplot as plt
-from keras.models import Model, load_model
-from keras.layers import Input, Dense, Flatten
-from keras.optimizers import Adam, RMSprop
-from keras import backend as K
 
 
 start_time = time.time()
@@ -28,6 +17,8 @@ start_time = time.time()
 # -- FILE PATHS --
 # * E+ Download Path *
 ep_path = '/usr/local/EnergyPlus-22-1-0'  # path to E+ on system
+script_directory = os.path.dirname(os.path.abspath(__file__))
+
 # IDF File / Modification Paths
 idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating.idf'  # building energy model (BEM) IDF file
 # Weather Path
@@ -35,137 +26,6 @@ ep_weather_path = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/DNK_Jan_Feb.epw'  # 
 # Output .csv Path (optional)
 cvs_output_path = r'/home/jun/HVAC/energy-plus-DRL/Dataframes/dataframes_output_train.csv'
 
-
-
-
-
-
-def A2CModels(input_shape, action_space, lr):
-
-    X_input = Input(shape=input_shape)
-    X = Flatten(input_shape=input_shape)(X_input)
-
-    X_hid = Dense(10, activation="elu", kernel_initializer='he_uniform')(X)
-
-    action = Dense(action_space, activation="softmax", kernel_initializer='he_uniform')(X_hid)
-    value = Dense(1, kernel_initializer='he_uniform')(X_hid)
-
-    Actor = Model(inputs = X_input, outputs = action)
-    Actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(learning_rate=lr))
-
-    Critic = Model(inputs = X_input, outputs = value)
-    Critic.compile(loss='mse', optimizer=RMSprop(learning_rate=lr))
-
-    return Actor, Critic
-
-
-
-class A2C_agent:
-    def __init__(self):
-        # -- RL AGENT --
-        #Input: TC variables + outdoor humidity and temperature + time of day (3) 
-        #Output: 10 possible actions for the fan mass flow rate
-        self.state_size = (9,1)
-        self.action_size = 10
-        self.lr = 0.001
-
-        self.Actor, self.Critic = A2CModels(input_shape = self.state_size, action_space = self.action_size, lr=self.lr)
-
-        # Instantiate games and plot memory
-        self.states, self.actions, self.rewards = [], [], []
-        self.scores, self.episodes, self.average = [], [], []
-        self.EPISODES = 1000
-        self.max_average = -99999999999 #To save the best model
-        self.Save_Path = 'Models'
-
-        if not os.path.exists(self.Save_Path): os.makedirs(self.Save_Path)
-        self.path = '{}_A2C_{}'.format("SDU_Building", self.lr)
-        self.Model_name = os.path.join(self.Save_Path, self.path)
-        self.state = None
-    
-        self.time_of_day = None
-
-    def remember(self, state, action, reward):
-        # store episode actions to memory
-        self.states.append(state)
-        action_onehot = np.zeros([self.action_size])
-        action_onehot[action] = 1
-        self.actions.append(action_onehot)
-        self.rewards.append(reward)
-
-    def act(self, state):
-        # Use the network to predict the next action to take, using the model
-        state = np.expand_dims(state, axis=0) #Need to add a dimension to the state to make it a 2D array                 
-        prediction = self.Actor(state)
-        action = np.random.choice(self.action_size, p=np.squeeze(prediction))#Squeeze to remove the extra dimension
-        return action
-        
-    def discount_rewards(self, reward):
-        # Compute the gamma-discounted rewards over an episode
-        gamma = 0.99    # discount rate
-        running_add = 0
-        discounted_r = np.zeros_like(reward)
-        for i in reversed(range(0,len(reward))):
-            running_add = running_add * gamma + reward[i]
-            discounted_r[i] = running_add
-
-        discounted_r -= np.mean(discounted_r) # normalizing the result
-        discounted_r /= np.std(discounted_r) # divide by standard deviation
-        return discounted_r
-
-    def replay(self):
-        # reshape memory to appropriate shape for training
-        states = np.vstack(self.states)
-        actions = np.vstack(self.actions)
-        # Compute discounted rewards
-        discounted_r = self.discount_rewards(self.rewards)
-        # Get Critic network predictions
-        values = self.Critic.predict(states)[:, 0]
-        # Compute advantages
-        advantages = discounted_r - values
-        # training Actor and Critic networks
-        self.Actor.fit(states, actions, sample_weight=advantages, epochs=1, verbose=0)
-        self.Critic.fit(states, discounted_r, epochs=1, verbose=0)
-        # reset training memory
-        self.states, self.actions, self.rewards = [], [], []
-
-    def load(self, Actor_name, Critic_name):
-        self.Actor = load_model(Actor_name, compile=False)
-        #self.Critic = load_model(Critic_name, compile=False)
-
-    def save(self):
-        self.Actor.save(self.Model_name + '_Actor.h5')
-        #self.Critic.save(self.Model_name + '_Critic.h5')
-    
-
-    def evaluate_model(self, score, episode):
-        self.scores.append(score)
-        self.episodes.append(episode)
-        self.average.append(sum(self.scores[-50:]) / len(self.scores[-50:]))
-
-
-        #if str(episode)[-1:] == "0":# much faster than episode % 100
-        pylab.plot(self.episodes, self.scores, 'b')
-        pylab.plot(self.episodes, self.average, 'r')
-        pylab.ylabel('Score', fontsize=18)
-        pylab.xlabel('Steps', fontsize=18)
-        try:
-            pylab.savefig(self.path+".png")
-        except OSError:
-            pass
-        
-        # saving best models
-        if self.average[-1] >= self.max_average:
-            self.max_average = self.average[-1]
-            self.save()
-            SAVING = "SAVING"
-        else:
-            SAVING = ""
-        print("episode: {}/{}, score: {}, average: {:.2f} {}".format(episode, self.EPISODES, score, self.average[-1], SAVING))
-
-        return self.average[-1]
-
-    
 
 class Energyplus_manager:
     """
@@ -177,13 +37,25 @@ class Energyplus_manager:
     """
     def __init__(self, agent:A2C_agent):
 
+        #--- A2C Reinforcement learning Agent ---#
         self.a2c_agent = agent #Any change to the self.a2c_agent object will change the original instance
         self.a2c_state = None
         self.step_reward = 0  
         self.previous_state = None
         self.previous_action = None
 
-            # STATE SPACE (& Auxiliary Simulation Data)
+
+        #--- Copy Energyplus into a local folder ---#
+
+        self.directory_name = "Energyplus_temp"
+        # Define the path of the target directory
+        self.eplus_copy_path = os.path.join(script_directory, self.directory_name)
+        #Delete directory if it exists
+        self.delete_directory(self.directory_name)
+        # Copy the directory to the target directory
+        shutil.copytree(ep_path, self.eplus_copy_path)
+
+        #--- STATE SPACE (& Auxiliary Simulation Data)
         self.zn0 = 'Thermal Zone 1' #name of the zone to control 
         self.tc_intvars = {}  # empty, don't need any
 
@@ -234,7 +106,7 @@ class Energyplus_manager:
 
         # -- Create Building Energy Simulation Instance --
         self.sim = BcaEnv(
-            ep_path=ep_path,
+            ep_path=self.eplus_copy_path,
             ep_idf_to_run=idf_file_name,
             timesteps=self.sim_timesteps,
             tc_vars=self.tc_vars,
@@ -261,8 +133,6 @@ class Energyplus_manager:
             # Get data from simulation at current timestep (and calling point) using ToC names
             var_data = self.sim.get_ems_data(list(self.sim.tc_var.keys()))
             weather_data = self.sim.get_ems_data(list(self.sim.tc_weather.keys()), return_dict=True)
-
-            callbacks.append(1)
 
             # get specific values from MdpManager based on name
             self.zn0_temp = var_data[0]  
@@ -362,26 +232,25 @@ class Energyplus_manager:
   
         return state
         
-   
+    def delete_directory(self,temp_folder_name):
+        # Define the path of the directory to be deleted
+        directory_path = os.path.join(script_directory, temp_folder_name)
+        # Delete the directory if it exists
+        if os.path.exists(directory_path):
+            shutil.rmtree(directory_path)
+            print(f"Directory '{temp_folder_name}' deleted")
+        else:
+            print(f"Directory '{temp_folder_name}' does not exist")      
 
-
-
-def is_file_in_use(file_path):
-    path = Path(file_path)
-    
-    if not path.exists():
-        raise FileNotFoundError
-    
-    try:
-        path.rename(path)
-    except PermissionError:
-        return True
-    else:
-        return False
+        out_path = Path('out')
+        if out_path.exists() and out_path.is_dir():
+            shutil.rmtree(out_path)  
+            print(f"Directory '{out_path}' deleted")
+        else:
+            print(f"Directory '{out_path}' does not exist")
 
 if __name__ == "__main__":
     #  --- Create agent instance --
-    callbacks = []
     episode_rewards = []
     a2c_agent = A2C_agent()
     failed_eps = 0
@@ -401,18 +270,13 @@ if __name__ == "__main__":
             print("Episode:", (ep+1), "Reward:", episode_rewards[-1])
             start_time = time.time()
             average = a2c_agent.evaluate_model(episode_rewards[-1], (ep+1)) # evaluate the model
-            #print("No. of callbacks: ", len(callbacks), "Empsy callbacks: ", eplus_manager.sim.callback_current_count)
             a2c_agent.replay() # train the network      
-            callbacks = []
+
             # -- Sample Output Data --
-            output_dfs = eplus_manager.sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)
-            #del eplus_manager #delete object
-            out_path = Path('out')
-            if out_path.exists() and out_path.is_dir():
-                shutil.rmtree(out_path)
+            #output_dfs = eplus_manager.sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)           
         else:
             failed_eps += 1
-
+        
         end_time = time.time()
         print("Time to evaluate and train: ", end_time - start_time)
         print("Episodes: ", ep)
