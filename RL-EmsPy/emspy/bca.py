@@ -335,4 +335,4 @@ class BcaEnv(EmsPy):
         Runs E+ simulation for given .IDF building model and EPW Weather File
         """
 
-        self.run_simulation(weather_file_path)
+        return self.run_simulation(weather_file_path)

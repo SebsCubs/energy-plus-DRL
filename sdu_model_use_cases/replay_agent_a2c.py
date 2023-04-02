@@ -384,7 +384,7 @@ if __name__ == "__main__":
     callbacks = []
     episode_rewards = []
     a2c_agent = A2C_agent()
-
+    failed_eps = 0
     end_time = time.time()
     print("Time to initialize: ", end_time - start_time)
 
@@ -396,22 +396,27 @@ if __name__ == "__main__":
         end_time = time.time()
         print("Time to run episode: ", end_time - start_time) 
 
-        if(sim_return == 1): 
+        if(sim_return == 0): 
             episode_rewards.append(np.sum(a2c_agent.rewards))
             print("Episode:", (ep+1), "Reward:", episode_rewards[-1])
             start_time = time.time()
             average = a2c_agent.evaluate_model(episode_rewards[-1], (ep+1)) # evaluate the model
-            print("No. of callbacks: ", len(callbacks), "Empsy callbacks: ", eplus_manager.sim.callback_current_count)
+            #print("No. of callbacks: ", len(callbacks), "Empsy callbacks: ", eplus_manager.sim.callback_current_count)
             a2c_agent.replay() # train the network      
             callbacks = []
             # -- Sample Output Data --
             output_dfs = eplus_manager.sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)
             #del eplus_manager #delete object
-        out_path = Path('out')
-        if out_path.exists() and out_path.is_dir():
-            shutil.rmtree(out_path)
+            out_path = Path('out')
+            if out_path.exists() and out_path.is_dir():
+                shutil.rmtree(out_path)
+        else:
+            failed_eps += 1
 
         end_time = time.time()
         print("Time to evaluate and train: ", end_time - start_time)
+        print("Episodes: ", ep)
+    
+    print("Failed episodes: ",failed_eps)
 
             
