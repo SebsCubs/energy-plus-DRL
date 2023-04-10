@@ -86,7 +86,7 @@ class A2C_agent:
 
         self.Save_Path = 'Models'
         if not os.path.exists(self.Save_Path): os.makedirs(self.Save_Path)
-        self.path = '{}_A2C_{}'.format("SDU_Building", self.lr)
+        self.path = '{}_A3C_{}'.format("SDU_Building", self.lr)
         self.Model_name = os.path.join(self.Save_Path, self.path)
         self.state = None
     
@@ -185,15 +185,15 @@ class A2C_agent:
         self.average.append(sum(self.scores[-50:]) / len(self.scores[-50:]))
 
         if __name__ == "__main__":
-        #if str(episode)[-1:] == "0":# much faster than episode % 100
-            pylab.plot(self.episodes, self.scores, 'b')
-            pylab.plot(self.episodes, self.average, 'r')
-            pylab.ylabel('Score', fontsize=18)
-            pylab.xlabel('Steps', fontsize=18)
-            try:
-                pylab.savefig(self.path+".png")
-            except OSError:
-                pass
+            if str(self.episode)[-1:] == "0":# much faster than episode % 100
+                pylab.plot(self.episodes, self.scores, 'b')
+                pylab.plot(self.episodes, self.average, 'r')
+                pylab.ylabel('Score', fontsize=18)
+                pylab.xlabel('Steps', fontsize=18)
+                try:
+                    pylab.savefig(self.path+".png")
+                except OSError:
+                    pass
         
             # saving best models
             if self.average[-1] >= self.max_average:
@@ -408,11 +408,11 @@ class Energyplus_manager:
         # 3: fan_electric_power 3045.81               0
         # 6: ppd                100                   0
         # State is already normalized
-        #nomalized_setpoint = (21-18)/17
+        nomalized_setpoint = (21-18)/17
         alpha = 0.8
         beta = 1.2
-        reward = - (  np.square(alpha *(abs(self.a2c_state[6]-0.1))) + beta*(self.a2c_state[3])  ) #occupancy, based on comfort metric
-        #reward = - (  alpha*(abs(nomalized_setpoint-self.a2c_state[1])) + beta*self.a2c_state[3]) #No ocupancy
+        #reward = - (  np.square(alpha *(abs(self.a2c_state[6]-0.1))) + beta*(self.a2c_state[3])  ) #occupancy, based on comfort metric
+        reward = - (  alpha*(abs(nomalized_setpoint-self.a2c_state[1])) + beta*self.a2c_state[3]) #No ocupancy
         return reward
 
     def get_state(self,var_data, weather_data):   
