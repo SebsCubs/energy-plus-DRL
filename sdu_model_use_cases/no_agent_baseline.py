@@ -6,14 +6,14 @@ Author: Sebastian Cubides
 
 import sys
 
-sys.path.insert(0, 'C:\EnergyPlusV22-1-0')
+sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0')
 
 from pyenergyplus import api #Importing from folder, therefore a warning may show
 from pyenergyplus.api import EnergyPlusAPI
 from emspy import EmsPy, BcaEnv
 import datetime
 import matplotlib.pyplot as plt
-from simple_pid import PID
+import tkinter
 
 
 
@@ -21,11 +21,11 @@ from simple_pid import PID
 # * E+ Download Path *
 ep_path = 'C:\EnergyPlusV22-1-0'  # path to E+ on system
 # IDF File / Modification Paths
-idf_file_name = r'C:\Projects\SDU\Thesis\pyenergyplus\BEMFiles\sdu_double_heating_dec_test.idf'  # building energy model (BEM) IDF file
+idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating_dec_test.idf'  # building energy model (BEM) IDF file
 # Weather Path
-ep_weather_path = r'C:\Projects\SDU\Thesis\pyenergyplus\BEMFiles\DNK_Dec.epw'  # EPW weather file
+ep_weather_path = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/DNK_Dec.epw'  # EPW weather file
 # Output .csv Path (optional)
-cvs_output_path = r'C:\Projects\SDU\Thesis\pyenergyplus\Dataframes\dataframes_output_test.csv'
+cvs_output_path = r'/home/jun/HVAC/energy-plus-DRL/Dataframes/dataframes_output_test.csv'
 
 
 # STATE SPACE (& Auxiliary Simulation Data)
@@ -39,6 +39,7 @@ tc_vars = {
     # -- Zone 0 (Core_Zn) --
     'zn0_temp': ('Zone Air Temperature', zn0),  # deg C
     'air_loop_fan_mass_flow_var' : ('Fan Air Mass Flow Rate','FANSYSTEMMODEL VAV'),  # kg/s
+    'air_loop_fan_electric_power' : ('Fan Electricity Rate','FANSYSTEMMODEL VAV'),
     're_heating_vav_coil_htgrate' : ('Heating Coil Heating Rate','Changeover Bypass HW Rht Coil'),  # deg C
     'pre_heating_coil_htgrate' : ('Heating Coil Heating Rate','HW Htg Coil'),
     'vav_mass_flow_rate' : ('System Node Mass Flow Rate','CHANGEOVER BYPASS HW RHT DAMPER OUTLET NODE'),
@@ -184,8 +185,8 @@ output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data col
 
 # -- Plot Results --
 fig, ax = plt.subplots()
-output_dfs['var'].plot(y='zn0_temp', use_index=True, ax=ax)
+output_dfs['var'].plot(y='air_loop_fan_electric_power', use_index=True, ax=ax)
 #output_dfs['var'].plot(y='pmv', use_index=True, ax=ax)
-plt.title('Temp & Fangers comfort metrics')
+plt.title('Fan electric power usage')
 plt.show()
 # Analyze results in "out" folder, DView, or directly from your Python variables and Pandas Dataframes

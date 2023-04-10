@@ -6,32 +6,25 @@ import time
 
 start_time = time.time()
 
-import sys
-
-sys.path.insert(0, 'C:\EnergyPlusV22-1-0')
-import os
-from pyenergyplus import api #Importing from folder, therefore a warning may show
-from pyenergyplus.api import EnergyPlusAPI
 import numpy as np
 from emspy import EmsPy, BcaEnv
 import datetime
 import matplotlib.pyplot as plt
-from keras.models import Model, load_model
-from keras.layers import Input, Dense, Flatten
-from keras.optimizers import Adam, RMSprop
-from keras import backend as K
+from keras.models import load_model
+import tkinter
 
 # -- FILE PATHS --
 # * E+ Download Path *
-ep_path = 'C:\EnergyPlusV22-1-0'  # path to E+ on system
+ep_path = '/usr/local/EnergyPlus-22-1-0'  # path to E+ on system
 # IDF File / Modification Paths
-idf_file_name = r'C:\Projects\SDU\Thesis\pyenergyplus\BEMFiles\sdu_double_heating_dec_test.idf'  # building energy model (BEM) IDF file
+idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating_dec_test.idf'  # building energy model (BEM) IDF file
 # Weather Path
-ep_weather_path = r'C:\Projects\SDU\Thesis\pyenergyplus\BEMFiles\DNK_Dec.epw'  # EPW weather file
+ep_weather_path = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/DNK_Dec.epw'  # EPW weather file
 # Output .csv Path (optional)
-cvs_output_path = r'C:\Projects\SDU\Thesis\pyenergyplus\Dataframes\dataframes_output_model.csv'
+cvs_output_path = r'/home/jun/HVAC/energy-plus-DRL/Dataframes/dataframes_output_model.csv'
 
-model_path = r'C:\Projects\SDU\Thesis\pyenergyplus\sdu_model_use_cases\Models\SDU_Building_A2C_0.001_Actor.h5'
+model_path = r'/home/jun/HVAC/energy-plus-DRL/sdu_model_use_cases/Models/A2C_ext_fan_comfort_reward_1000_eps.h5'
+#model_path = r'/home/jun/HVAC/energy-plus-DRL/sdu_model_use_cases/Models/SDU_Building_A2C_First_1000eps.h5'
 
 # STATE SPACE (& Auxiliary Simulation Data)
 
@@ -71,7 +64,7 @@ tc_actuators = {
 
 
 # -- Simulation Params --
-calling_point_for_callback_fxn = EmsPy.available_calling_points[12]  # 6-16 valid for timestep loop during simulation
+calling_point_for_callback_fxn = EmsPy.available_calling_points[7]  # 6-16 valid for timestep loop during simulation
 sim_timesteps = 6  # every 60 / sim_timestep minutes (e.g 10 minutes per timestep)
 
 # -- Create Building Energy Simulation Instance --
@@ -86,31 +79,6 @@ sim = BcaEnv(
     tc_weather=tc_weather
 )
 
-
-
-def A2CModels(input_shape, action_space, lr):
-
-    X_input = Input(shape=input_shape)
-
-    #X = Conv2D(32, 8, strides=(4, 4),padding="valid", activation="elu", data_format="channels_first", input_shape=input_shape)(X_input)
-    #X = Conv2D(64, 4, strides=(2, 2),padding="valid", activation="elu", data_format="channels_first")(X)
-    #X = Conv2D(64, 3, strides=(1, 1),padding="valid", activation="elu", data_format="channels_first")(X)
-    X = Flatten(input_shape=input_shape)(X_input)
-
-    X_hid = Dense(10, activation="elu", kernel_initializer='he_uniform')(X)
-    #X = Dense(256, activation="elu", kernel_initializer='he_uniform')(X)
-    #X = Dense(64, activation="elu", kernel_initializer='he_uniform')(X)
-
-    action = Dense(action_space, activation="softmax", kernel_initializer='he_uniform')(X_hid)
-    value = Dense(1, kernel_initializer='he_uniform')(X_hid)
-
-    Actor = Model(inputs = X_input, outputs = action)
-    Actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(learning_rate=lr))
-
-    Critic = Model(inputs = X_input, outputs = value)
-    Critic.compile(loss='mse', optimizer=RMSprop(learning_rate=lr))
-
-    return Actor, Critic
 
 
 class Energyplus_Agent:
@@ -214,7 +182,8 @@ class Energyplus_Agent:
         # 8: outdoor_temp       10                    -10
 
         self.time_of_day = self.bca.get_ems_data(['t_hours'])
-        weather_data = list(weather_data.values())[:2]        
+        weather_data = list(weather_data.values())[:2]
+        
         #concatenate self.time_of_day , var_data and weather_data
         state = np.concatenate((np.array([self.time_of_day]),var_data,weather_data)) 
 
@@ -277,9 +246,9 @@ output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data col
 # -- Plot Results --
 
 fig, ax = plt.subplots()
-output_dfs['var'].plot(y='zn0_temp', use_index=True, ax=ax)
-#output_dfs['var'].plot(y='pmv', use_index=True, ax=ax)
-plt.title('Zone 0 Temperature')
+output_dfs['var'].plot(y='deck_temp', use_index=True, ax=ax)
+#output_dfs['var'].plot(y='air_loop_fan_electric_power', use_index=True, ax=ax)
+plt.title('Deck air temperature')
 plt.show()
 # Analyze results in "out" folder, DView, or directly from your Python variables and Pandas Dataframes
 end_time = time.time()

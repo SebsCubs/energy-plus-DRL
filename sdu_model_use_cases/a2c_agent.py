@@ -13,10 +13,11 @@ def A2CModels(input_shape, action_space, lr):
     X_input = Input(shape=input_shape)
     X = Flatten(input_shape=input_shape)(X_input)
 
-    X_hid = Dense(10, activation="elu", kernel_initializer='he_uniform')(X)
+    X_hid = Dense(64, activation="elu", kernel_initializer='he_uniform')(X)
+    X_hid2 = Dense(32, activation="elu", kernel_initializer='he_uniform')(X_hid)
 
-    action = Dense(action_space, activation="softmax", kernel_initializer='he_uniform')(X_hid)
-    value = Dense(1, kernel_initializer='he_uniform')(X_hid)
+    action = Dense(action_space, activation="softmax", kernel_initializer='he_uniform')(X_hid2)
+    value = Dense(1, kernel_initializer='he_uniform')(X_hid2)
 
     Actor = Model(inputs = X_input, outputs = action)
     Actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(learning_rate=lr))
@@ -35,7 +36,7 @@ class A2C_agent:
         #Output: 10 possible actions for the fan mass flow rate
         self.state_size = (9,1)
         self.action_size = 10
-        self.lr = 0.001
+        self.lr = 0.0001
 
         self.Actor, self.Critic = A2CModels(input_shape = self.state_size, action_space = self.action_size, lr=self.lr)
 
@@ -53,13 +54,17 @@ class A2C_agent:
     
         self.time_of_day = None
 
-    def remember(self, state, action, reward):
-        # store episode actions to memory
-        self.states.append(state)
-        action_onehot = np.zeros([self.action_size])
-        action_onehot[action] = 1
-        self.actions.append(action_onehot)
-        self.rewards.append(reward)
+    def remember(self, queue):
+        try:
+            mem = queue.get(block = True, timeout = 2)
+            self.states.append(mem[0])
+            action_onehot = np.zeros([self.action_size])
+            action_onehot[mem[1]] = 1
+            self.actions.append(action_onehot)
+            self.rewards.append(mem[2])
+        except:
+            #After the queue is emptied and no info comes after two seconds
+            pass
 
     def act(self, state):
         # Use the network to predict the next action to take, using the model

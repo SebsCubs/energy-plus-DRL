@@ -2,6 +2,7 @@
 Author: Sebastian Cubides
 
 """
+from multiprocessing import Process, Queue
 from a2c_agent import A2C_agent
 from pathlib import Path
 import shutil
@@ -10,6 +11,7 @@ import numpy as np
 from emspy import EmsPy, BcaEnv
 import datetime
 import time
+
 
 
 start_time = time.time()
@@ -27,6 +29,9 @@ ep_weather_path = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/DNK_Jan_Feb.epw'  # 
 cvs_output_path = r'/home/jun/HVAC/energy-plus-DRL/Dataframes/dataframes_output_train.csv'
 
 
+
+
+
 class Energyplus_manager:
     """
     Create agent instance, which is used to create actuation() and observation() functions (both optional) and maintain
@@ -35,15 +40,14 @@ class Energyplus_manager:
     (Agent) and use its methods for the callbacks. * That way data from the simulation can be stored with the Agent
     instance.
     """
-    def __init__(self, agent:A2C_agent):
+    def __init__(self,q:Queue):
 
         #--- A2C Reinforcement learning Agent ---#
-        self.a2c_agent = agent #Any change to the self.a2c_agent object will change the original instance
+        self.q = q
         self.a2c_state = None
         self.step_reward = 0  
         self.previous_state = None
         self.previous_action = None
-
 
         #--- Copy Energyplus into a local folder ---#
 
@@ -125,6 +129,10 @@ class Energyplus_manager:
             update_actuation_frequency=1  # linked to actuation update
         )
 
+        self.run_simulation()
+        
+        
+
     def observation_function(self):
         # -- FETCH/UPDATE SIMULATION DATA --
         self.time = self.sim.get_ems_data(['t_datetimes'])
@@ -154,8 +162,8 @@ class Energyplus_manager:
                 self.previous_state = self.a2c_state
                 self.previous_action = 0
             
-            self.a2c_agent.remember(self.a2c_state, self.previous_action, self.step_reward)
-
+            self.q.put([self.a2c_state, self.previous_action, self.step_reward], block = False)
+            #print("Queue size",queue.qsize())
             self.previous_state = self.a2c_state
 
         return self.step_reward              
@@ -189,14 +197,21 @@ class Energyplus_manager:
             
         return { 'fan_mass_flow_act': fan_flow_rate, }
     
+    def run_simulation(self): 
+        self.sim.run_env(ep_weather_path)
+
     def reward_function(self):
         #Taking into account the fan power and the deck temp, a no-occupancy scenario
         #State:                  MAX:                  MIN:
         # 1: zone0_temp         35                    18
         # 3: fan_electric_power 3045.81               0
-        # State is already normalize, hyperparameters are all equal to one for now 
-        nomalized_setpoint = (21-18)/17
-        reward = - (abs(nomalized_setpoint-self.a2c_state[1]) + self.a2c_state[3])
+        # 6: ppd                100                   0
+        # State is already normalized
+        #nomalized_setpoint = (21-18)/17
+        alpha = 0.8
+        beta = 1.2
+        reward = - (  np.square(alpha *(abs(self.a2c_state[6]-0.1))) + beta*(self.a2c_state[3])  ) #occupancy, based on comfort metric
+        #reward = - (  alpha*(abs(nomalized_setpoint-self.a2c_state[1])) + beta*self.a2c_state[3]) #No ocupancy
         return reward
 
     def get_state(self,var_data, weather_data):   
@@ -256,26 +271,24 @@ if __name__ == "__main__":
     failed_eps = 0
     end_time = time.time()
     print("Time to initialize: ", end_time - start_time)
+    
+    queue = Queue() #Global queue object for the threads
 
     for ep in range(a2c_agent.EPISODES):
         start_time = time.time()
-        eplus_manager = Energyplus_manager(a2c_agent)  
-        sim_return = eplus_manager.sim.run_env(ep_weather_path)  
-
+        #--- Process handler ###
+        proc = Process(target=Energyplus_manager,args=(queue,)) 
+        proc.start()
+        while(proc.exitcode == None):
+            a2c_agent.remember(queue)
+        proc.join()
         end_time = time.time()
         print("Time to run episode: ", end_time - start_time) 
-
-        if(sim_return == 0): 
-            episode_rewards.append(np.sum(a2c_agent.rewards))
-            print("Episode:", (ep+1), "Reward:", episode_rewards[-1])
-            start_time = time.time()
-            average = a2c_agent.evaluate_model(episode_rewards[-1], (ep+1)) # evaluate the model
-            a2c_agent.replay() # train the network      
-
-            # -- Sample Output Data --
-            #output_dfs = eplus_manager.sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)           
-        else:
-            failed_eps += 1
+        episode_rewards.append(np.sum(a2c_agent.rewards))
+        print("Episode:", (ep+1), "Reward:", episode_rewards[-1])
+        start_time = time.time()
+        average = a2c_agent.evaluate_model(episode_rewards[-1], (ep+1)) # evaluate the model
+        a2c_agent.replay() # train the network      
         
         end_time = time.time()
         print("Time to evaluate and train: ", end_time - start_time)
