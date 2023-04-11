@@ -44,8 +44,6 @@ script_directory = os.path.dirname(os.path.abspath(__file__))
 idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating.idf'  # building energy model (BEM) IDF file
 # Weather Path
 ep_weather_path = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/DNK_Jan_Feb.epw'  # EPW weather file
-# Output .csv Path (optional)
-cvs_output_path = r'/home/jun/HVAC/energy-plus-DRL/Dataframes/dataframes_output_train.csv'
 
 
 ####################### RL model and class  #################
@@ -83,7 +81,7 @@ class A2C_agent:
         self.state_size = (9,1)
         self.action_size = 10
         self.lr = 0.0001
-
+        self.state_window = 3
         self.Actor, self.Critic = A2CModels(input_shape = self.state_size, action_space = self.action_size, lr=self.lr)
         self.ale_easter_egg = 9042023
 
@@ -327,19 +325,23 @@ class Energyplus_manager:
         )
         
         #To make e+ shut up!
+               
         devnull = open('/dev/null', 'w')
         orig_stdout_fd = os.dup(1)
         orig_stderr_fd = os.dup(2)
         os.dup2(devnull.fileno(), 1)
         os.dup2(devnull.fileno(), 2)
+        
 
         self.run_simulation()
 
         #Restoring stdout
+              
         os.dup2(orig_stdout_fd, 1)
         os.dup2(orig_stderr_fd, 2)
         os.close(orig_stdout_fd)
         os.close(orig_stderr_fd)
+        
 
 
         self.run_neural_net()
@@ -375,7 +377,7 @@ class Energyplus_manager:
 
 
             # -- UPDATE STATE & REWARD ---
-            self.a2c_state = self.get_state(var_data,weather_data)
+            self.a2c_state = self.get_state(var_data,weather_data) #also uses data from local a2c object
             self.step_reward = self.reward_function()
                 
             # Initialize previous state for first step
@@ -428,7 +430,7 @@ class Energyplus_manager:
         # 1: zone0_temp         35                    18
         # 3: fan_electric_power 3045.81               0
         # 6: ppd                100                   0
-        # State is already normalized
+        # State is already normalized, all previous states are saved in the local a2c_object
         nomalized_setpoint = (21-18)/17
         alpha = 0.8
         beta = 1.2
@@ -440,7 +442,7 @@ class Energyplus_manager:
 
         #State:                  MAX:                  MIN:
         # 0: time of day        24                    0
-        # 1: zone0_temp         35                    18
+        # 1: zone0_temp         35                    15
         # 2: fan_mass_flow      2.18                  0
         # 3: fan_electric_power 3045.81               0
         # 4: deck_temp_setpoint 30                    15
@@ -451,13 +453,13 @@ class Energyplus_manager:
 
         self.time_of_day = self.sim.get_ems_data(['t_hours'])
         weather_data = list(weather_data.values())[:2]
-        
-        #concatenate self.time_of_day , var_data and weather_data
+
+   
         state = np.concatenate((np.array([self.time_of_day]),var_data,weather_data)) 
 
         #normalize each value in the state according to the table above
         state[0] = state[0]/24
-        state[1] = (state[1]-18)/17
+        state[1] = (state[1]-15)/20
         state[2] = state[2]/2.18
         state[3] = state[3]/3045.81
         state[4] = (state[4]-15)/15
@@ -466,6 +468,14 @@ class Energyplus_manager:
         state[7] = state[7]/100
         state[8] = (state[8]+10)/20
 
+        #takes last three states
+        previous_states = self.local_a2c_object.states[-self.local_a2c_object.state_window:]
+        if(np.array(previous_states).shape == (3,9)): 
+            
+            state[1] = (state[1] + np.sum(np.array(previous_states)[:,1])) / 4
+            state[3] = (state[3] + np.sum(np.array(previous_states)[:,3])) / 4
+            state[6] = (state[6] + np.sum(np.array(previous_states)[:,6])) / 4
+            
         return state
         
     def delete_directory(self,temp_folder_name = ""):
@@ -487,8 +497,6 @@ class Energyplus_manager:
 
 class CustomManager(BaseManager):
     pass
-
-
 
 
 def run_one_manger(ep,a2c_object,lock):
@@ -513,7 +521,7 @@ if __name__ == "__main__":
 
             EPISODES = shared_a2c_object.get_EPISODES()
             # start worker processes
-            with Pool(processes=10, maxtasksperchild = 3) as pool:
+            with Pool(processes=18, maxtasksperchild = 3) as pool:
                 #--- Process handler ###
 
                 for index in range(EPISODES):
