@@ -174,14 +174,14 @@ class EmsPy:
         self._actuators_used_set = set()  # keep track of what EMS actuators are actually actuated
         self.simulation_success = 1  # 1 fail, 0 success
 
-        print('\n*NOTE: Simulation emspy class and instance created!')
+        #print('\n*NOTE: Simulation emspy class and instance created!')
 
     
 
     @staticmethod
     def get_temp_run_dir() -> str:
         di = mkdtemp()
-        print(f"Generated temporary working directory at: {di}")
+        #print(f"Generated temporary working directory at: {di}")
         return di
 
 

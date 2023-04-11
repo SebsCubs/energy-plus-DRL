@@ -2,22 +2,10 @@
 Author: Sebastian Cubides
 
 """
-from multiprocessing import Pool, Manager
-from multiprocessing.managers import BaseManager
 from pathlib import Path
 import shutil
 import os
-
-#Supress TF warnings:
-import logging
-logging.getLogger('tensorflow').setLevel(logging.ERROR)
-os.environ["KMP_AFFINITY"] = "noverbose"
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-import tensorflow as tf
-tf.autograph.set_verbosity(3)
-import absl.logging
-absl.logging.set_verbosity(absl.logging.ERROR)
-
+import gc
 import sys
 import numpy as np
 from emspy import EmsPy, BcaEnv
@@ -25,13 +13,13 @@ import datetime
 import time
 from keras.models import Model
 from keras.layers import Input, Dense, Flatten
-
-import matplotlib
-matplotlib.use('Agg') # For saving in a headless program. Must be before importing matplotlib.pyplot or pylab!
-import matplotlib.pyplot as plt
+import pylab
 import tkinter
 import copy
-
+from loky import get_reusable_executor
+from contextlib import closing
+from multiprocessing import Pool, Manager
+from multiprocessing.managers import BaseManager
 
 start_time = time.time()
 
@@ -46,6 +34,8 @@ idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating.idf
 ep_weather_path = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/DNK_Jan_Feb.epw'  # EPW weather file
 # Output .csv Path (optional)
 cvs_output_path = r'/home/jun/HVAC/energy-plus-DRL/Dataframes/dataframes_output_train.csv'
+
+
 
 
 ####################### RL model and class  #################
@@ -174,13 +164,13 @@ class A2C_agent:
         self.score = np.sum(self.rewards)
         discounted_r = self.discount_rewards(self.rewards)
         # Get Critic network predictions
-        values = self.Critic(states)[:, 0]
+        values = self.Critic.predict(states)[:, 0]
         # Compute advantages
         advantages = discounted_r - values
         # training Actor and Critic networks
         self.Actor.fit(states, actions, sample_weight=advantages, epochs=1, verbose=0)
         self.Critic.fit(states, discounted_r, epochs=1, verbose=0)
-        #reset training memory
+        # reset training memory
         self.states, self.actions, self.rewards = [], [], []
 
 
@@ -193,23 +183,18 @@ class A2C_agent:
 
         #self.episodes.append(self.episode)
         self.average.append(sum(self.scores[-50:]) / len(self.scores[-50:]))
+
         if __name__ == "__main__":
             if str(self.episode)[-1:] == "0":# much faster than episode % 100
-                try:      
-                    fig, ax = plt.subplots() # fig : figure object, ax : Axes object              
-                    ax.plot(self.episodes, self.scores, 'b')
-                    ax.plot(self.episodes, self.average, 'r')
-                    ax.set_ylabel('Score', fontsize=18)
-                    ax.set_xlabel('Steps', fontsize=18)
-                    ax.set_title("Episode scores")
-                    fig.savefig(self.path+".png")
-                    plt.close('all')
-                except OSError as e:
-                    print(e)
-                except:
-                    e = sys.exc_info()[0]
-                    print("Something else went wrong e: ", e)
-                                     
+                pylab.plot(self.episodes, self.scores, 'b')
+                pylab.plot(self.episodes, self.average, 'r')
+                pylab.ylabel('Score', fontsize=18)
+                pylab.xlabel('Steps', fontsize=18)
+                try:
+                    pylab.savefig(self.path+".png")
+                except OSError:
+                    pass
+        
             # saving best models
             if self.average[-1] >= self.max_average:
                 self.max_average = self.average[-1]
@@ -217,9 +202,11 @@ class A2C_agent:
                 SAVING = "SAVING"
             else:
                 SAVING = ""
-            print("episode: {}/{}, score: {}, average: {:.2f}, max average:{:.2f} {}".format(self.episode, self.EPISODES, self.scores[-1], self.average[-1],self.max_average, SAVING))
+            print("episode: {}/{}, score: {}, average: {:.2f} {}".format(self.episode, self.EPISODES, self.scores[-1], self.average[-1], SAVING))
 
         return self.average[-1]
+
+
 
 ####################### Process function: EnergyPlus manager #################
 
@@ -232,7 +219,7 @@ class Energyplus_manager:
     instance.
     """
     def __init__(self, episode, a2c_object:A2C_agent,lock):
-        
+
         #--- A2C Reinforcement learning Agent ---#
         self.global_a2c_object = a2c_object
         self.local_a2c_object = self.global_a2c_object.copy()
@@ -293,7 +280,7 @@ class Energyplus_manager:
         self.time = None
 
         self.working_dir = BcaEnv.get_temp_run_dir()
-        #print(f"Thread: Running at working dir: {self.working_dir}")
+        print(f"Thread: Running at working dir: {self.working_dir}")
         
         #--- Copy Energyplus into a temp folder ---#
 
@@ -328,25 +315,17 @@ class Energyplus_manager:
         
         #To make e+ shut up!
         devnull = open('/dev/null', 'w')
-        orig_stdout_fd = os.dup(1)
-        orig_stderr_fd = os.dup(2)
+        oldstdout_fno = os.dup(sys.stdout.fileno())
         os.dup2(devnull.fileno(), 1)
-        os.dup2(devnull.fileno(), 2)
 
         self.run_simulation()
 
-        #Restoring stdout
-        os.dup2(orig_stdout_fd, 1)
-        os.dup2(orig_stderr_fd, 2)
-        os.close(orig_stdout_fd)
-        os.close(orig_stderr_fd)
+        os.dup2(oldstdout_fno, 1)
 
-
+        
         self.run_neural_net()
-
         with lock:
             self.local_a2c_object.update_global(self.global_a2c_object)
-
         self.delete_directory()
     
 
@@ -474,32 +453,38 @@ class Energyplus_manager:
         # Delete the directory if it exists
         if os.path.exists(directory_path):
             shutil.rmtree(directory_path)
-            #print(f"Directory '{directory_path}' deleted")    
+            print(f"Directory '{directory_path}' deleted")    
 
         out_path = Path('out')
         if out_path.exists() and out_path.is_dir():
             shutil.rmtree(out_path)  
-            #print(f"Directory '{out_path}' deleted")
+            print(f"Directory '{out_path}' deleted")
 
+
+class ParameterWrapper():
+    def __init__(self,ep,a2c_object,lock):
+        self.ep = ep
+        self.a2c_object = a2c_object
+        self.lock = lock
+        
 
 ####################### Custom manager #################
 #This allows to share a global object holding the networks of the RL Agent.
-
 class CustomManager(BaseManager):
     pass
 
-
-
-
-def run_one_manger(ep,a2c_object,lock):
+def run_one_manger(param_wrapper):
+    ep = param_wrapper.ep
+    a2c_object = param_wrapper.a2c_object
+    lock = param_wrapper.lock
     eplus_object = Energyplus_manager(ep,a2c_object,lock)
-    return eplus_object.episode_reward
+    ep_reward = eplus_object.episode_reward
+    del eplus_object
+    gc.collect()
+    #print("Episodes in the main object: ",a2c_object.get_scores())
+    return ep_reward
 
 if __name__ == "__main__":
-    pid = os. getpid()
-    print("Main process, pid: ",pid)
-    start_time = time.time()
-    # register the a python class with the custom manager
     CustomManager.register('A2C_agent', A2C_agent)
     
     with Manager() as global_manager:
@@ -508,19 +493,20 @@ if __name__ == "__main__":
 
         # create and start the custom manager
         with CustomManager() as manager:
+            start_time = time.time()
+
             # create a shared python object
             shared_a2c_object = manager.A2C_agent()
 
             EPISODES = shared_a2c_object.get_EPISODES()
             # start worker processes
-            with Pool(processes=10, maxtasksperchild = 3) as pool:
-                #--- Process handler ###
-
-                for index in range(EPISODES):
-                    pool.apply_async(run_one_manger, args=(index, shared_a2c_object, lock,))
-                
-                pool.close()
-                pool.join()
-            
+            # automatically shutdown after idling for 30s
+            executor = get_reusable_executor(max_workers=4, timeout=30)
+            #--- Process handler ###
+            arguments = [ParameterWrapper(i, shared_a2c_object, lock) for i in range(EPISODES)] #Episode number and lock
+            results = executor.map(run_one_manger, arguments)
+            n_workers = len(set(results))
+            print("Number of used processes:", n_workers)
             end_time = time.time()
             print("Time to run ",EPISODES," episodes: ", end_time - start_time)
+    
