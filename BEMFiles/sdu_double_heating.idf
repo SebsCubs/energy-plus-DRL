@@ -6550,6 +6550,8 @@ Output:Variable,*,Zone Air Terminal Outdoor Air Volume Flow Rate,hourly; !- HVAC
 Output:Variable,*,Zone Thermal Comfort Fanger Model PMV,hourly; !- Zone Average []
 Output:Variable,*,Zone Thermal Comfort Fanger Model PPD,hourly; !- Zone Average [%]
 
+Output:Variable,*,Pump Electricity Rate,hourly; !- HVAC Average [W]
+Output:Variable,*,Facility Total HVAC Electricity Demand Rate,hourly; !- HVAC Average [W]
 
 Output:Table:Monthly,
   Building Monthly Fan Energy Demand Report,                ! Name

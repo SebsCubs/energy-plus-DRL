@@ -6550,16 +6550,23 @@ Output:Variable,*,Zone Air Terminal Outdoor Air Volume Flow Rate,hourly; !- HVAC
 Output:Variable,*,Zone Thermal Comfort Fanger Model PMV,hourly; !- Zone Average []
 Output:Variable,*,Zone Thermal Comfort Fanger Model PPD,hourly; !- Zone Average [%]
 
+Output:Variable,*,Pump Electricity Rate,hourly; !- HVAC Average [W]
+Output:Variable,*,Facility Total HVAC Electricity Demand Rate,hourly; !- HVAC Average [W]
 
 Output:Table:Monthly,
-  Building Monthly Fan Energy Demand Report,                ! Name
+  Building Monthly Baseboard energy usage,                ! Name
   3,                                                        ! Digits After Decimal
-  Fan Electricity Rate,                                     ! Variable or Meter 1 Name
+  Baseboard Total Heating Energy,                                     ! Variable or Meter 1 Name
+  SumOrAverage;                                             ! Aggregation Type for Variable or Meter 1
+  
+
+Output:Table:Monthly,
+  Pump usage Monthly,                                       ! Name
+  3,                                                        ! Digits After Decimal
+  Pump Electricity Rate,                           ! Variable or Meter 1 Name
   SumOrAverage,                                             ! Aggregation Type for Variable or Meter 1
-  Fan Air Mass Flow Rate,                                   ! Variable or Meter 2 Name
-  SumOrAverage,                                             ! Aggregation Type for Variable or Meter 2
-  Fan Electricity Energy,                                   ! Variable or Meter 3 Name
-  SumOrAverage;                                             ! Aggregation Type for Variable or Meter 3
+  Pump Mass Flow Rate,
+  SumOrAverage;
 
 Output:Table:Monthly,
   Average PPD report,                ! Name

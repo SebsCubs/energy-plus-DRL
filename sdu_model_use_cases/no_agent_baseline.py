@@ -40,15 +40,16 @@ tc_vars = {
     'zn0_temp': ('Zone Air Temperature', zn0),  # deg C
     'air_loop_fan_mass_flow_var' : ('Fan Air Mass Flow Rate','FANSYSTEMMODEL VAV'),  # kg/s
     'air_loop_fan_electric_power' : ('Fan Electricity Rate','FANSYSTEMMODEL VAV'),
-    're_heating_vav_coil_htgrate' : ('Heating Coil Heating Rate','Changeover Bypass HW Rht Coil'),  # deg C
+    'damper_coil_heating_rate' : ('Heating Coil Heating Rate','Changeover Bypass HW Rht Coil'),  # W
     'pre_heating_coil_htgrate' : ('Heating Coil Heating Rate','HW Htg Coil'),
-    'vav_mass_flow_rate' : ('System Node Mass Flow Rate','CHANGEOVER BYPASS HW RHT DAMPER OUTLET NODE'),
+    'damper_mass_flow_var' : ('System Node Mass Flow Rate','CHANGEOVER BYPASS HW RHT DAMPER OUTLET NODE'),
     'vav_damper_position' : ('Zone Air Terminal VAV Damper Position','CHANGEOVER BYPASS HW RHT'),
     'vav_outdoor_flow_rate' : ('Zone Air Terminal Outdoor Air Volume Flow Rate','CHANGEOVER BYPASS HW RHT'),
     'ppd' : ('Zone Thermal Comfort Fanger Model PPD', 'THERMAL ZONE 1 189.1-2009 - OFFICE - WHOLEBUILDING - MD OFFICE - CZ4-8 PEOPLE'),
     'pmv' : ('Zone Thermal Comfort Fanger Model PMV', 'THERMAL ZONE 1 189.1-2009 - OFFICE - WHOLEBUILDING - MD OFFICE - CZ4-8 PEOPLE'),
     'deck_temp' : ('System Node Temperature','Node 30'),
     'post_deck_temp' : ('System Node Temperature','Node 13'),
+    'facility_hvac_electricity' : ('Facility Total HVAC Electricity Demand Rate','WHOLE BUILDING'),
 }
 
 tc_meters = {} # empty, don't need any
@@ -185,8 +186,8 @@ output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data col
 
 # -- Plot Results --
 fig, ax = plt.subplots()
-output_dfs['var'].plot(y='air_loop_fan_electric_power', use_index=True, ax=ax)
+output_dfs['var'].plot(y='facility_hvac_electricity', use_index=True, ax=ax)
 #output_dfs['var'].plot(y='pmv', use_index=True, ax=ax)
-plt.title('Fan electric power usage')
+plt.title('HVAC Electricity')
 plt.show()
 # Analyze results in "out" folder, DView, or directly from your Python variables and Pandas Dataframes

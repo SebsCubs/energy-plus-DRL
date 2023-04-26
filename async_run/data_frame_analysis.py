@@ -38,8 +38,8 @@ vplot2 = ax.violinplot(y_baseline, points=200, vert=False, widths=1.1,
                      showmeans=True, showextrema=True, showmedians=False,
                      bw_method=0.5)
 
-ax.set_title('PPD over December (Comfort reward, ext. Fan)')
-ax.set_xlabel('PPD (percentage)')
+ax.set_title('Fan power usage over December (Comfort reward, ext. Fan)')
+ax.set_xlabel('Power (Watts)')
 ax.set_ylabel('Density')
 
 model_mean = np.mean(y_axis)
@@ -53,7 +53,7 @@ ax.legend(handles=[vplot1["bodies"][0], vplot2["bodies"][0]], labels=[model_labe
 
 # Show the plot
 plt.show()
-"""
+
 
 
 # -- Plot Results --
@@ -62,13 +62,13 @@ fig, ax = plt.subplots()
 #output_dfs.plot(x='Datetime', y=variable, use_index=True, ax=ax)
 #output_dfs.plot(x='Datetime', y='deck_temp', use_index=True, ax=ax)
 #output_dfs.plot(x='Datetime', y='post_deck_temp', use_index=True, ax=ax)
-output_dfs.plot(x='Datetime', y='air_loop_fan_electric_power', use_index=True, ax=ax)
-baseline_dfs.plot(x='Datetime', y='air_loop_fan_electric_power', use_index=True, ax=ax)
+output_dfs.plot(x='Datetime', y=variable, use_index=True, ax=ax)
+baseline_dfs.plot(x='Datetime', y=variable, use_index=True, ax=ax)
 plt.title('Fan electric power (Watts)')
 plt.show()
 
 """
-
+"""
 
 """
 Date of the months:

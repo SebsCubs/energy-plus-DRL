@@ -9,10 +9,12 @@ import shutil
 import os
 
 #Supress TF warnings:
+
 import logging
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 os.environ["KMP_AFFINITY"] = "noverbose"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 import tensorflow as tf
 tf.autograph.set_verbosity(3)
 import absl.logging
@@ -30,7 +32,6 @@ import matplotlib
 matplotlib.use('Agg') # For saving in a headless program. Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import tkinter
-import copy
 
 
 start_time = time.time()
@@ -41,7 +42,7 @@ ep_path = '/usr/local/EnergyPlus-22-1-0'  # path to E+ on system
 script_directory = os.path.dirname(os.path.abspath(__file__))
 
 # IDF File / Modification Paths
-idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating.idf'  # building energy model (BEM) IDF file
+idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_damper_all_rooms.idf'  # building energy model (BEM) IDF file
 # Weather Path
 ep_weather_path = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/DNK_Jan_Feb.epw'  # EPW weather file
 
@@ -66,10 +67,10 @@ def A2CModels(input_shape, action_space, lr):
     value = Dense(1, kernel_initializer='he_uniform')(X_hid2)
 
     Actor = Model(inputs = X_input, outputs = action)
-    Actor.compile(loss='categorical_crossentropy')
+    Actor.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=lr), loss='categorical_crossentropy')
 
     Critic = Model(inputs = X_input, outputs = value)
-    Critic.compile(loss='mse')
+    Critic.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=lr), loss='mse')
 
     return Actor, Critic
 
@@ -78,18 +79,18 @@ class A2C_agent:
         # -- RL AGENT --
         #Input: TC variables + outdoor humidity and temperature + time of day (3) 
         #Output: 10 possible actions for the fan mass flow rate
-        self.state_size = (9,1)
+        self.state_size = (12,1)
         self.action_size = 10
         self.lr = 0.0001
-        self.state_window = 3
+        self.state_window = 2
         self.Actor, self.Critic = A2CModels(input_shape = self.state_size, action_space = self.action_size, lr=self.lr)
         self.ale_easter_egg = 9042023
 
-        self.states, self.actions, self.rewards = [], [], []
+        self.states, self.actions, self.rewards, self.not_averaged_state = [], [], [], []
         self.scores, self.episodes, self.average = [], [], []
         self.score = 0
         self.episode = 0
-        self.EPISODES = 1000
+        self.EPISODES = 1500
         self.max_average = -99999999999 #To save the best model
 
         self.Save_Path = 'Models'
@@ -121,19 +122,14 @@ class A2C_agent:
     
     def update_global(self, global_a2c_agent):
         #DO NOT USE with the global object, only process copies
-        global_a2c_agent.update_global_net(self.Actor,self.Critic)
-        global_a2c_agent.append_score(self.score)
+        global_a2c_agent.replay(self.states,self.actions,self.rewards)
+        global_a2c_agent.update_ep_count()
         global_a2c_agent.evaluate_model()
 
-    def update_global_net(self,Actor,Critic):
-        self.Actor = copy.deepcopy(Actor)
-        self.Critic = copy.deepcopy(Critic)
-        
-    
-    def append_score(self,score):
+
+    def update_ep_count(self):
         self.episode += 1
         self.episodes.append(self.episode)
-        self.scores.append(score)
         
 
     def remember(self, state, action, reward):
@@ -164,13 +160,14 @@ class A2C_agent:
         discounted_r /= np.std(discounted_r) # divide by standard deviation
         return discounted_r
 
-    def replay(self):
+    def replay(self,local_states,local_actions,local_rewards):
         # reshape memory to appropriate shape for training
-        states = np.vstack(self.states)
-        actions = np.vstack(self.actions)
+        states = np.vstack(local_states)
+        actions = np.vstack(local_actions)
         # Compute discounted rewards
-        self.score = np.sum(self.rewards)
-        discounted_r = self.discount_rewards(self.rewards)
+        #self.score = np.sum(local_rewards)
+        self.scores.append(np.sum(local_rewards))
+        discounted_r = self.discount_rewards(local_rewards)
         # Get Critic network predictions
         values = self.Critic(states)[:, 0]
         # Compute advantages
@@ -178,8 +175,6 @@ class A2C_agent:
         # training Actor and Critic networks
         self.Actor.fit(states, actions, sample_weight=advantages, epochs=1, verbose=0)
         self.Critic.fit(states, discounted_r, epochs=1, verbose=0)
-        #reset training memory
-        self.states, self.actions, self.rewards = [], [], []
 
 
     def save(self):
@@ -188,11 +183,10 @@ class A2C_agent:
     
 
     def evaluate_model(self):
-
         #self.episodes.append(self.episode)
         self.average.append(sum(self.scores[-50:]) / len(self.scores[-50:]))
         if __name__ == "__main__":
-            if str(self.episode)[-1:] == "0":# much faster than episode % 100
+            if str(self.episode)[-1:] == "0":# much faster than episode % 10
                 try:      
                     fig, ax = plt.subplots() # fig : figure object, ax : Axes object              
                     ax.plot(self.episodes, self.scores, 'b')
@@ -200,7 +194,7 @@ class A2C_agent:
                     ax.set_ylabel('Score', fontsize=18)
                     ax.set_xlabel('Steps', fontsize=18)
                     ax.set_title("Episode scores")
-                    fig.savefig(self.path+".png")
+                    fig.savefig(self.path+".png", bbox_inches="tight")
                     plt.close('all')
                 except OSError as e:
                     print(e)
@@ -255,6 +249,7 @@ class Energyplus_manager:
             'deck_temp_setpoint' : ('System Node Setpoint Temperature','Node 30'),  # deg C
             'deck_temp' : ('System Node Temperature','Node 30'),  # deg C
             'ppd' : ('Zone Thermal Comfort Fanger Model PPD', 'THERMAL ZONE 1 189.1-2009 - OFFICE - WHOLEBUILDING - MD OFFICE - CZ4-8 PEOPLE'),
+            'facility_hvac_electricity' : ('Facility Total HVAC Electricity Demand Rate','WHOLE BUILDING'),
         }
 
         self.tc_meters = {} # empty, don't need any
@@ -325,7 +320,9 @@ class Energyplus_manager:
         )
         
         #To make e+ shut up!
-               
+        
+        
+        
         devnull = open('/dev/null', 'w')
         orig_stdout_fd = os.dup(1)
         orig_stderr_fd = os.dup(2)
@@ -336,25 +333,18 @@ class Energyplus_manager:
         self.run_simulation()
 
         #Restoring stdout
-              
+        
         os.dup2(orig_stdout_fd, 1)
         os.dup2(orig_stderr_fd, 2)
         os.close(orig_stdout_fd)
-        os.close(orig_stderr_fd)
+        os.close(orig_stderr_fd)   
         
 
-
-        self.run_neural_net()
-
         with lock:
-            self.local_a2c_object.update_global(self.global_a2c_object)
-
+            self.local_a2c_object.update_global(self.global_a2c_object, )
         self.delete_directory()
     
 
-
-    def run_neural_net(self):
-        self.local_a2c_object.replay() # train the network
 
     def observation_function(self):
         # -- FETCH/UPDATE SIMULATION DATA --
@@ -364,17 +354,6 @@ class Energyplus_manager:
             # Get data from simulation at current timestep (and calling point) using ToC names
             var_data = self.sim.get_ems_data(list(self.sim.tc_var.keys()))
             weather_data = self.sim.get_ems_data(list(self.sim.tc_weather.keys()), return_dict=True)
-
-            # get specific values from MdpManager based on name
-            self.zn0_temp = var_data[0]  
-            self.fan_mass_flow = var_data[1]  # kg/s
-            self.fan_electric_power = var_data[2]  # W
-            self.deck_temp_setpoint = var_data[3]  # deg C
-            self.deck_temp = var_data[4]  # deg C
-            self.ppd = var_data[5]  # percent
-            # OR if using "return_dict=True"
-            #outdoor_temp = weather_data['oa_db']  # outdoor air dry bulb temp
-
 
             # -- UPDATE STATE & REWARD ---
             self.a2c_state = self.get_state(var_data,weather_data) #also uses data from local a2c object
@@ -405,18 +384,6 @@ class Energyplus_manager:
         #Map the action to the fan mass flow rate
         fan_flow_rate = action*(2.18/10)
         self.previous_action = action
-        """
-        # print reporting       
-        current_time = self.sim.get_ems_data(['t_cumulative_time']) 
-        print(f'\n\nHours passed: {str(current_time)}')
-        print(f'Time: {str(self.time)}')
-        print('\n\t* Actuation Function:')
-        print(f'\t\Actor action: {action}')
-        print(f'\t\Fan mass flow rate: {self.fan_mass_flow}'  # outputs ordered list
-            f'\n\t\Action:{fan_flow_rate}')  # outputs dictionary
-        print(f'\t\Last State: {self.state}')        
-        print(f'\t\Reward: {self.step_reward}')
-        """
             
         return { 'fan_mass_flow_act': fan_flow_rate, }
     
@@ -431,11 +398,12 @@ class Energyplus_manager:
         # 3: fan_electric_power 3045.81               0
         # 6: ppd                100                   0
         # State is already normalized, all previous states are saved in the local a2c_object
-        nomalized_setpoint = (21-18)/17
-        alpha = 0.8
-        beta = 1.2
-        #reward = - (  np.square(alpha *(abs(self.a2c_state[6]-0.1))) + beta*(self.a2c_state[3])  ) #occupancy, based on comfort metric
-        reward = - (  alpha*(abs(nomalized_setpoint-self.a2c_state[1])) + beta*self.a2c_state[3]) #No ocupancy
+        #nomalized_setpoint = (21-15)/20
+        alpha = 1
+        beta = 0.3
+        #kappa = 1
+        reward = - (  alpha *np.square(( np.maximum(0,(self.a2c_state[6]-0.1))) + beta*(self.a2c_state[3]) )) #Comfort
+        #reward = - (  alpha*(max(0, nomalized_setpoint-self.a2c_state[1] )) + beta*self.a2c_state[3] ) #Temperature
         return reward
 
     def get_state(self,var_data, weather_data):   
@@ -447,15 +415,19 @@ class Energyplus_manager:
         # 3: fan_electric_power 3045.81               0
         # 4: deck_temp_setpoint 30                    15
         # 5: deck_temp          35                    0
-        # 6: ppd                100                   0        
-        # 7: outdoor_rh         100                   0  
-        # 8: outdoor_temp       10                    -10
+        # 6: ppd                100                   0 
+        # 7: total_hvac_energy  3000                  0      
+        # 8: outdoor_rh         100                   0  
+        # 9: outdoor_temp       10                    -10
+        # 10: wind direction     360                   0
+        # 11: wind speed        20                    0
 
         self.time_of_day = self.sim.get_ems_data(['t_hours'])
-        weather_data = list(weather_data.values())[:2]
-
+        weather_data1 = list(weather_data.values())[:2]
+        weather_data2 = list(weather_data.values())[-2:]
+        weather_data = np.concatenate((weather_data1, weather_data2))
    
-        state = np.concatenate((np.array([self.time_of_day]),var_data,weather_data)) 
+        state = np.concatenate((np.array([self.time_of_day]),var_data[:7],weather_data)) 
 
         #normalize each value in the state according to the table above
         state[0] = state[0]/24
@@ -465,17 +437,26 @@ class Energyplus_manager:
         state[4] = (state[4]-15)/15
         state[5] = state[5]/35
         state[6] = state[6]/100
-        state[7] = state[7]/100
-        state[8] = (state[8]+10)/20
+        state[7] = state[7]/3000
+        state[8] = state[8]/100
+        state[9] = (state[9]+10)/20
+        state[10] = state[10]/360
+        state[11] = state[11]/20
 
-        #takes last three states
-        previous_states = self.local_a2c_object.states[-self.local_a2c_object.state_window:]
-        if(np.array(previous_states).shape == (3,9)): 
-            
-            state[1] = (state[1] + np.sum(np.array(previous_states)[:,1])) / 4
-            state[3] = (state[3] + np.sum(np.array(previous_states)[:,3])) / 4
-            state[6] = (state[6] + np.sum(np.array(previous_states)[:,6])) / 4
-            
+        self.local_a2c_object.not_averaged_state.append(state)
+        
+        # takes last state_window samples and averages it 
+        """
+        w = self.local_a2c_object.state_window
+
+        last_w_states = self.local_a2c_object.not_averaged_state[-w:]
+
+        state_average = sum(last_w_states) / len(last_w_states)
+
+        state[1] = state_average[1]
+        state[3] = state_average[3]
+        state[6] = state_average[6]
+        """    
         return state
         
     def delete_directory(self,temp_folder_name = ""):
