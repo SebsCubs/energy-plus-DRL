@@ -79,7 +79,7 @@ class A2C_agent:
         # -- RL AGENT --
         #Input: TC variables + outdoor humidity and temperature + time of day (3) 
         #Output: 10 possible actions for the fan mass flow rate
-        self.state_size = (12,1)
+        self.state_size = (11,1)
         self.action_size = 10
         self.lr = 0.0001
         self.state_window = 2
@@ -90,7 +90,7 @@ class A2C_agent:
         self.scores, self.episodes, self.average = [], [], []
         self.score = 0
         self.episode = 0
-        self.EPISODES = 1500
+        self.EPISODES = 1000
         self.max_average = -99999999999 #To save the best model
 
         self.Save_Path = 'Models'
@@ -249,7 +249,7 @@ class Energyplus_manager:
             'deck_temp_setpoint' : ('System Node Setpoint Temperature','Node 30'),  # deg C
             'deck_temp' : ('System Node Temperature','Node 30'),  # deg C
             'ppd' : ('Zone Thermal Comfort Fanger Model PPD', 'THERMAL ZONE 1 189.1-2009 - OFFICE - WHOLEBUILDING - MD OFFICE - CZ4-8 PEOPLE'),
-            'facility_hvac_electricity' : ('Facility Total HVAC Electricity Demand Rate','WHOLE BUILDING'),
+            #'facility_hvac_electricity' : ('Facility Total HVAC Electricity Demand Rate','WHOLE BUILDING'),
         }
 
         self.tc_meters = {} # empty, don't need any
@@ -400,13 +400,13 @@ class Energyplus_manager:
         # State is already normalized, all previous states are saved in the local a2c_object
         #nomalized_setpoint = (21-15)/20
         alpha = 1
-        beta = 0.3
+        beta = 0.5
         #kappa = 1
         reward = - (  alpha *np.square(( np.maximum(0,(self.a2c_state[6]-0.1))) + beta*(self.a2c_state[3]) )) #Comfort
         #reward = - (  alpha*(max(0, nomalized_setpoint-self.a2c_state[1] )) + beta*self.a2c_state[3] ) #Temperature
         return reward
 
-    def get_state(self,var_data, weather_data):   
+    def get_state(self, var_data, weather_data):   
 
         #State:                  MAX:                  MIN:
         # 0: time of day        24                    0
@@ -415,19 +415,18 @@ class Energyplus_manager:
         # 3: fan_electric_power 3045.81               0
         # 4: deck_temp_setpoint 30                    15
         # 5: deck_temp          35                    0
-        # 6: ppd                100                   0 
-        # 7: total_hvac_energy  3000                  0      
-        # 8: outdoor_rh         100                   0  
-        # 9: outdoor_temp       10                    -10
-        # 10: wind direction     360                   0
-        # 11: wind speed        20                    0
+        # 6: ppd                100                   0     
+        # 7: outdoor_rh         100                   0  
+        # 8: outdoor_temp       10                    -10
+        # 9: wind direction     360                   0
+        # 10: wind speed        20                    0
 
         self.time_of_day = self.sim.get_ems_data(['t_hours'])
         weather_data1 = list(weather_data.values())[:2]
         weather_data2 = list(weather_data.values())[-2:]
         weather_data = np.concatenate((weather_data1, weather_data2))
    
-        state = np.concatenate((np.array([self.time_of_day]),var_data[:7],weather_data)) 
+        state = np.concatenate((np.array([self.time_of_day]),var_data[:6],weather_data)) 
 
         #normalize each value in the state according to the table above
         state[0] = state[0]/24
@@ -437,16 +436,15 @@ class Energyplus_manager:
         state[4] = (state[4]-15)/15
         state[5] = state[5]/35
         state[6] = state[6]/100
-        state[7] = state[7]/3000
-        state[8] = state[8]/100
-        state[9] = (state[9]+10)/20
-        state[10] = state[10]/360
-        state[11] = state[11]/20
+        state[7] = state[7]/100
+        state[8] = (state[8]+10)/20
+        state[9] = state[9]/360
+        state[10] = state[10]/20
 
         self.local_a2c_object.not_averaged_state.append(state)
         
         # takes last state_window samples and averages it 
-        """
+        
         w = self.local_a2c_object.state_window
 
         last_w_states = self.local_a2c_object.not_averaged_state[-w:]
@@ -456,7 +454,7 @@ class Energyplus_manager:
         state[1] = state_average[1]
         state[3] = state_average[3]
         state[6] = state_average[6]
-        """    
+        
         return state
         
     def delete_directory(self,temp_folder_name = ""):
