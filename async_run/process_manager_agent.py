@@ -128,8 +128,8 @@ class A2C_agent:
         global_a2c_agent.evaluate_model()
 
     def update_global_net(self,Actor,Critic):
-        self.Actor = copy.deepcopy(Actor)
-        self.Critic = copy.deepcopy(Critic)
+        self.Actor.set_weights(Actor.get_weights())
+        self.Critic.set_weights(Critic.get_weights())
         
     
     def append_score(self,score):
@@ -429,11 +429,11 @@ class Energyplus_manager:
         # 3: fan_electric_power 3045.81               0
         # 6: ppd                100                   0
         # State is already normalized
-        nomalized_setpoint = (21-18)/17
+        #nomalized_setpoint = (21-18)/17
         alpha = 0.8
         beta = 1.2
-        #reward = - (  np.square(alpha *(abs(self.a2c_state[6]-0.1))) + beta*(self.a2c_state[3])  ) #occupancy, based on comfort metric
-        reward = - (  alpha*(abs(nomalized_setpoint-self.a2c_state[1])) + beta*self.a2c_state[3]) #No ocupancy
+        reward = - (  np.square(alpha *(abs(self.a2c_state[6]-0.1))) + beta*(self.a2c_state[3])  ) #occupancy, based on comfort metric
+        #reward = - (  alpha*(abs(nomalized_setpoint-self.a2c_state[1])) + beta*self.a2c_state[3]) #No ocupancy
         return reward
 
     def get_state(self,var_data, weather_data):   
