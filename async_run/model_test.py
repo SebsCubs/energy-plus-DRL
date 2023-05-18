@@ -12,6 +12,7 @@ import datetime
 import matplotlib.pyplot as plt
 from keras.models import load_model
 import tkinter
+from data_frame_analysis import plot_results
 
 # -- FILE PATHS --
 # * E+ Download Path *
@@ -23,9 +24,11 @@ ep_weather_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/BEMFiles/DNK_Dec
 # Output .csv Path (optional)
 cvs_output_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/Dataframes/dataframes_output_model.csv'
 
-model_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/async_run/Models/SDU_Building_A3C_1e-05_Actor.h5'
+#model_path = r'/home/jun/HVAC/energy-plus-DRL/async_run/Models/ExtFan_Models/A3C_comfort_900eps/A3C_900eps_comfort_extFan.h5' #Best so far
 
-#model_path = r'/home/jun/HVAC/energy-plus-DRL/sdu_model_use_cases/Models/SDU_Building_A2C_First_1000eps.h5'
+#model_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/async_run/Models/5000_SDU_Building_A3C_1e-05_Actor.h5' #Best for temperature
+
+model_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/async_run/Models/proc_SDU_Building_A3C_0.001_Actor.h5' 
 
 # STATE SPACE (& Auxiliary Simulation Data)
 
@@ -186,14 +189,12 @@ class Energyplus_Agent:
         # 6: ppd                100                   0        
         # 7: outdoor_rh         100                   0  
         # 8: outdoor_temp       10                    -10
-        # 9: wind direction     360                   0
-        # 10: wind speed        20                    0
 
         self.time_of_day = self.bca.get_ems_data(['t_hours'])
         weather_data = list(weather_data.values())[:2]
         
         #concatenate self.time_of_day , var_data and weather_data
-        state = np.concatenate((np.array([self.time_of_day]),var_data,weather_data)) 
+        state = np.concatenate((np.array([self.time_of_day]),var_data[:6],weather_data)) 
 
         #normalize each value in the state according to the table above
         state[0] = state[0]/24
@@ -268,11 +269,4 @@ output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data col
 
 # -- Plot Results --
 
-fig, ax = plt.subplots()
-output_dfs['var'].plot(y='zn0_temp', use_index=True, ax=ax)
-#output_dfs['var'].plot(y='oa_db', use_index=True, ax=ax)
-plt.title('Room temperature')
-plt.show()
-# Analyze results in "out" folder, DView, or directly from your Python variables and Pandas Dataframes
-end_time = time.time()
-print("Time for post-processing: ", end_time - start_time, "s")
+plot_results()
