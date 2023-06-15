@@ -2,26 +2,23 @@
 Author: Sebastian Cubides
 
 """
-
-
 import sys
-
 sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0')
-
 from pyenergyplus import api #Importing from folder, therefore a warning may show
 from pyenergyplus.api import EnergyPlusAPI
 from emspy import EmsPy, BcaEnv
 import datetime
 import matplotlib.pyplot as plt
 import tkinter
-
+import data_frame_analysis as dfa
 
 
 # -- FILE PATHS --
 # * E+ Download Path *
 ep_path = 'C:\EnergyPlusV22-1-0'  # path to E+ on system
 # IDF File / Modification Paths
-idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating_dec_test.idf'  # building energy model (BEM) IDF file
+#idf_file_name = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/BEMFiles/sdu_double_heating_dec_test.idf'  # building energy model (BEM) IDF file
+idf_file_name = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/BEMFiles/sdu_double_heating_dec_test.idf'
 # Weather Path
 ep_weather_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/BEMFiles/DNK_Dec.epw'  # EPW weather file
 # Output .csv Path (optional)
@@ -49,7 +46,7 @@ tc_vars = {
     'pmv' : ('Zone Thermal Comfort Fanger Model PMV', 'THERMAL ZONE 1 189.1-2009 - OFFICE - WHOLEBUILDING - MD OFFICE - CZ4-8 PEOPLE'),
     'deck_temp' : ('System Node Temperature','Node 30'),
     'post_deck_temp' : ('System Node Temperature','Node 13'),
-    'facility_hvac_electricity' : ('Facility Total HVAC Electricity Demand Rate','WHOLE BUILDING'),
+    'total_hvac_energy' : ('Facility Total HVAC Electricity Demand Rate','WHOLE BUILDING'),
 }
 
 tc_meters = {} # empty, don't need any
@@ -186,8 +183,10 @@ output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data col
 
 # -- Plot Results --
 fig, ax = plt.subplots()
-output_dfs['var'].plot(y='facility_hvac_electricity', use_index=True, ax=ax)
+output_dfs['var'].plot(y='zn0_temp', use_index=True, ax=ax)
 #output_dfs['var'].plot(y='pmv', use_index=True, ax=ax)
 plt.title('HVAC Electricity')
 plt.show()
 # Analyze results in "out" folder, DView, or directly from your Python variables and Pandas Dataframes
+
+dfa.plot_only_baseline()

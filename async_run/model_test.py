@@ -11,8 +11,7 @@ from emspy import EmsPy, BcaEnv
 import datetime
 import matplotlib.pyplot as plt
 from keras.models import load_model
-import tkinter
-from data_frame_analysis import plot_results
+import data_frame_analysis as dfa
 
 # -- FILE PATHS --
 # * E+ Download Path *
@@ -24,11 +23,9 @@ ep_weather_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/BEMFiles/DNK_Dec
 # Output .csv Path (optional)
 cvs_output_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/Dataframes/dataframes_output_model.csv'
 
-#model_path = r'/home/jun/HVAC/energy-plus-DRL/async_run/Models/ExtFan_Models/A3C_comfort_900eps/A3C_900eps_comfort_extFan.h5' #Best so far
+model_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/async_run/Models/20230520-101314_A3C_0.001_Actor.h5'
 
-#model_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/async_run/Models/5000_SDU_Building_A3C_1e-05_Actor.h5' #Best for temperature
-
-model_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/async_run/Models/proc_SDU_Building_A3C_0.001_Actor.h5' 
+#model_path = r'/home/jun/HVAC/energy-plus-DRL/sdu_model_use_cases/Models/SDU_Building_A2C_First_1000eps.h5'
 
 # STATE SPACE (& Auxiliary Simulation Data)
 
@@ -46,7 +43,9 @@ tc_vars = {
     'deck_temp' : ('System Node Temperature','Node 30'),  # deg C
     'ppd' : ('Zone Thermal Comfort Fanger Model PPD', 'THERMAL ZONE 1 189.1-2009 - OFFICE - WHOLEBUILDING - MD OFFICE - CZ4-8 PEOPLE'),
     'damper_node_flow_rate' : ('System Node Mass Flow Rate','CHANGEOVER BYPASS HW RHT DAMPER OUTLET NODE'),
-    
+    'total_hvac_energy' : ('Facility Total HVAC Electricity Demand Rate','WHOLE BUILDING'),
+    'damper_coil_heating_rate' : ('Heating Coil Heating Rate','Changeover Bypass HW Rht Coil'),  # W
+    'pre_heating_coil_htgrate' : ('Heating Coil Heating Rate','HW Htg Coil'),
 }
 
 tc_meters = {} # empty, don't need any
@@ -108,7 +107,7 @@ class Energyplus_Agent:
         # -- RL AGENT --
         #Input: TC variables + outdoor humidity and temperature + time of day (3) 
         #Output: 10 possible actions for the fan mass flow rate
-        self.state_size = (9,1)
+        self.state_size = (11,1)
         self.action_size = 10
 
         self.Actor = self.load(model_path) 
@@ -191,14 +190,12 @@ class Energyplus_Agent:
         # 8: outdoor_temp       10                    -10
 
         self.time_of_day = self.bca.get_ems_data(['t_hours'])
-        weather_data = list(weather_data.values())[:2]
-        
-        #concatenate self.time_of_day , var_data and weather_data
-        state = np.concatenate((np.array([self.time_of_day]),var_data[:6],weather_data)) 
+   
+        state = np.concatenate((np.array([self.time_of_day]),var_data[:6], list(weather_data.values())[:2])) 
 
         #normalize each value in the state according to the table above
         state[0] = state[0]/24
-        state[1] = (state[1]-18)/17
+        state[1] = (state[1]-15)/20
         state[2] = state[2]/2.18
         state[3] = state[3]/3045.81
         state[4] = (state[4]-15)/15
@@ -206,23 +203,6 @@ class Energyplus_Agent:
         state[6] = state[6]/100
         state[7] = state[7]/100
         state[8] = (state[8]+10)/20
-
-
-        """
-        self.not_averaged_state.append(state)
-        
-        # takes last state_window samples and averages it 
-        w = self.state_window
-
-        last_w_states = self.not_averaged_state[-w:]
-
-        state_average = sum(last_w_states) / len(last_w_states)
-
-        #Only zone_temp, fan power and ppd averaged
-        state[1] = state_average[1]
-        state[3] = state_average[3]
-        state[6] = state_average[6]
-        """
         return state
 
     def act(self, state):
@@ -269,4 +249,4 @@ output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data col
 
 # -- Plot Results --
 
-plot_results()
+dfa.plot_results()

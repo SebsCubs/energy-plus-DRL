@@ -3536,10 +3536,10 @@ HeatBalanceAlgorithm,
 
 RunPeriod,
   Run Period 1,                           !- Name
-  12,                                     !- Begin Month
+  3,                                     !- Begin Month
   1,                                      !- Begin Day of Month
   ,                                       !- Begin Year
-  12,                                     !- End Month
+  3,                                     !- End Month
   31,                                     !- End Day of Month
   ,                                   !- End Year
   Sunday,                                 !- Day of Week for Start Day
