@@ -11,19 +11,20 @@ from emspy import EmsPy, BcaEnv
 import datetime
 import matplotlib.pyplot as plt
 from keras.models import load_model
-import tkinter
+import data_frame_analysis as dfa
 
 # -- FILE PATHS --
 # * E+ Download Path *
 ep_path = '/usr/local/EnergyPlus-22-1-0'  # path to E+ on system
 # IDF File / Modification Paths
-idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating_dec_test.idf'  # building energy model (BEM) IDF file
+idf_file_name = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/BEMFiles/sdu_double_heating_dec_test.idf' 
 # Weather Path
-ep_weather_path = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/DNK_Dec.epw'  # EPW weather file
+ep_weather_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/BEMFiles/DNK_Dec.epw'  # EPW weather file
 # Output .csv Path (optional)
-cvs_output_path = r'/home/jun/HVAC/energy-plus-DRL/Dataframes/dataframes_output_model.csv'
+cvs_output_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/Dataframes/dataframes_output_model.csv'
 
-model_path = r'/home/jun/HVAC/energy-plus-DRL/sdu_model_use_cases/Models/A2C_ext_fan_comfort_reward_1000_eps.h5'
+model_path = r'/home/jun/HVAC/repo_recover/energy-plus-DRL/async_run/Models/20230520-101314_A3C_0.001_Actor.h5'
+
 #model_path = r'/home/jun/HVAC/energy-plus-DRL/sdu_model_use_cases/Models/SDU_Building_A2C_First_1000eps.h5'
 
 # STATE SPACE (& Auxiliary Simulation Data)
@@ -41,6 +42,10 @@ tc_vars = {
     'deck_temp_setpoint' : ('System Node Setpoint Temperature','Node 30'),  # deg C
     'deck_temp' : ('System Node Temperature','Node 30'),  # deg C
     'ppd' : ('Zone Thermal Comfort Fanger Model PPD', 'THERMAL ZONE 1 189.1-2009 - OFFICE - WHOLEBUILDING - MD OFFICE - CZ4-8 PEOPLE'),
+    'damper_node_flow_rate' : ('System Node Mass Flow Rate','CHANGEOVER BYPASS HW RHT DAMPER OUTLET NODE'),
+    'total_hvac_energy' : ('Facility Total HVAC Electricity Demand Rate','WHOLE BUILDING'),
+    'damper_coil_heating_rate' : ('Heating Coil Heating Rate','Changeover Bypass HW Rht Coil'),  # W
+    'pre_heating_coil_htgrate' : ('Heating Coil Heating Rate','HW Htg Coil'),
 }
 
 tc_meters = {} # empty, don't need any
@@ -80,7 +85,6 @@ sim = BcaEnv(
 )
 
 
-
 class Energyplus_Agent:
     """
     Create agent instance, which is used to create actuation() and observation() functions (both optional) and maintain
@@ -103,11 +107,13 @@ class Energyplus_Agent:
         # -- RL AGENT --
         #Input: TC variables + outdoor humidity and temperature + time of day (3) 
         #Output: 10 possible actions for the fan mass flow rate
-        self.state_size = (9,1)
+        self.state_size = (11,1)
         self.action_size = 10
 
         self.Actor = self.load(model_path) 
-
+        self.state_window = 3 #How many states in the past will we watch to calculate averages
+        self.states = []
+        self.not_averaged_state = []
         self.state = None
         self.time_of_day = None
 
@@ -136,6 +142,7 @@ class Energyplus_Agent:
 
             # -- UPDATE STATE & REWARD ---
             self.state = self.get_state(var_data,weather_data)
+            self.states.append(self.state)
                   
 
     def actuation_function(self):        
@@ -148,14 +155,15 @@ class Energyplus_Agent:
         # The max flow rate of the fan is autosized to 1.81 m3/s
         # The mass flow rate is in kg/s, so the max flow rate is 1.81*1.204 = 2.18 kg/s
         
-        
-        #Agent action
-        action = self.act(self.state)    
+        if self.time < datetime.datetime.now():
+            #Agent action
+            action = self.act(self.state)    
          
-        #Map the action to the fan mass flow rate
-        fan_flow_rate = action*(2.18/10)
+            #Map the action to the fan mass flow rate
+            fan_flow_rate = action*(2.18/10)
+
         """
-                # print reporting       
+        # print reporting       
         current_time = self.bca.get_ems_data(['t_cumulative_time']) 
         print(f'\n\nHours passed: {str(current_time)}')
         print(f'Time: {str(self.time)}')
@@ -172,7 +180,7 @@ class Energyplus_Agent:
 
         #State:                  MAX:                  MIN:
         # 0: time of day        24                    0
-        # 1: zone0_temp         35                    18
+        # 1: zone0_temp         35                    15
         # 2: fan_mass_flow      2.18                  0
         # 3: fan_electric_power 3045.81               0
         # 4: deck_temp_setpoint 30                    15
@@ -182,14 +190,12 @@ class Energyplus_Agent:
         # 8: outdoor_temp       10                    -10
 
         self.time_of_day = self.bca.get_ems_data(['t_hours'])
-        weather_data = list(weather_data.values())[:2]
-        
-        #concatenate self.time_of_day , var_data and weather_data
-        state = np.concatenate((np.array([self.time_of_day]),var_data,weather_data)) 
+   
+        state = np.concatenate((np.array([self.time_of_day]),var_data[:6], list(weather_data.values())[:2])) 
 
         #normalize each value in the state according to the table above
         state[0] = state[0]/24
-        state[1] = (state[1]-18)/17
+        state[1] = (state[1]-15)/20
         state[2] = state[2]/2.18
         state[3] = state[3]/3045.81
         state[4] = (state[4]-15)/15
@@ -197,14 +203,12 @@ class Energyplus_Agent:
         state[6] = state[6]/100
         state[7] = state[7]/100
         state[8] = (state[8]+10)/20
-        
-  
         return state
 
     def act(self, state):
         # Use the network to predict the next action to take, using the model
         state = np.expand_dims(state, axis=0) #Need to add a dimension to the state to make it a 2D array                 
-        prediction = self.Actor(state)
+        prediction = self.Actor(state)[0]
         action = np.random.choice(self.action_size, p=np.squeeze(prediction))#Squeeze to remove the extra dimension
         return action
         
@@ -245,11 +249,4 @@ output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data col
 
 # -- Plot Results --
 
-fig, ax = plt.subplots()
-output_dfs['var'].plot(y='deck_temp', use_index=True, ax=ax)
-#output_dfs['var'].plot(y='air_loop_fan_electric_power', use_index=True, ax=ax)
-plt.title('Deck air temperature')
-plt.show()
-# Analyze results in "out" folder, DView, or directly from your Python variables and Pandas Dataframes
-end_time = time.time()
-print("Time for post-processing: ", end_time - start_time, "s")
+dfa.plot_results()

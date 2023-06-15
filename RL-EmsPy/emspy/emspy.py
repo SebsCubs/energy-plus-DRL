@@ -14,6 +14,8 @@ import datetime
 
 import pandas as pd
 import numpy as np
+from tempfile import mkdtemp
+
 
 
 class EmsPy:
@@ -93,6 +95,7 @@ class EmsPy:
         sys.path.insert(0, ep_path)  # set path to E+
         import pyenergyplus.api
         from pyenergyplus.api import EnergyPlusAPI
+        
 
         self.pyapi = pyenergyplus.api
         self.api = EnergyPlusAPI()  # instantiation of Python EMS API
@@ -171,7 +174,16 @@ class EmsPy:
         self._actuators_used_set = set()  # keep track of what EMS actuators are actually actuated
         self.simulation_success = 1  # 1 fail, 0 success
 
-        print('\n*NOTE: Simulation emspy class and instance created!')
+        #print('\n*NOTE: Simulation emspy class and instance created!')
+
+    
+
+    @staticmethod
+    def get_temp_run_dir() -> str:
+        di = mkdtemp()
+        #print(f"Generated temporary working directory at: {di}")
+        return di
+
 
     def _init_ems_handles_and_data(self):
         """
@@ -855,7 +867,7 @@ class EmsPy:
 
         self.api.state_manager.delete_state(self.state)
 
-    def run_simulation(self, weather_file: str):
+    def run_simulation(self, weather_file: str,output_dir:str = 'out'):
         """This runs the EnergyPlus simulation and RL experiment."""
 
         # check valid input by user
@@ -866,9 +878,12 @@ class EmsPy:
             self._init_calling_points_and_callback_functions()
 
         # RUN SIMULATION
+        
+        
         print('\n* * * Running E+ Simulation * * *\n')
-        self.simulation_success = self.api.runtime.run_energyplus(self.state, ['-w', weather_file, '-d', 'out',
+        self.simulation_success = self.api.runtime.run_energyplus(self.state, ['-w', weather_file, '-d', output_dir,
                                                                                self.idf_file])  # cmd line args
+        
         if self.simulation_success != 0:
             print('\n* * * Simulation FAILED * * *\n')
             

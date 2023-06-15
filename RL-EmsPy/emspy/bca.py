@@ -330,9 +330,10 @@ class BcaEnv(EmsPy):
 
             return return_df
 
-    def run_env(self, weather_file_path: str):
+    def run_env(self, weather_file_path: str, output_dir:str = 'out'):
         """
         Runs E+ simulation for given .IDF building model and EPW Weather File
         """
-
-        return self.run_simulation(weather_file_path)
+        
+        return self.run_simulation(weather_file_path,output_dir)
+        

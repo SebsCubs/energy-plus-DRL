@@ -1,0 +1,11 @@
+# To find how many handles have open the top 15 processes with more handles
+
+lsof | awk '{ print $1 " " $2; }' | sort -rn | uniq -c | sort -rn | head -15 
+
+# Show the files with open handles:
+
+lsof -nP +L1
+
+# Monitor system resources:
+
+top

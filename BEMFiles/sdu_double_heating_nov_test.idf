@@ -3536,11 +3536,11 @@ HeatBalanceAlgorithm,
 
 RunPeriod,
   Run Period 1,                           !- Name
-  12,                                     !- Begin Month
+  11,                                     !- Begin Month
   1,                                      !- Begin Day of Month
   ,                                       !- Begin Year
-  12,                                     !- End Month
-  31,                                     !- End Day of Month
+  11,                                     !- End Month
+  30,                                     !- End Day of Month
   ,                                   !- End Year
   Sunday,                                 !- Day of Week for Start Day
   No,                                     !- Use Weather File Holidays and Special Days
