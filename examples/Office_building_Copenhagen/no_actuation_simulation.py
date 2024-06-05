@@ -1,8 +1,8 @@
 # -- FILE PATHS -- (modify these to your local paths, This format should be OS agnostic, can use any kind of slash) #
 #ep_path = r'C:\EnergyPlusV22-1-0'  # path to E+ on system (Windows example)
-ep_path = r'/usr/local/EnergyPlus-22-1-0' #(Linux example)
-idf_file_name = r'sdu_damper_all_rooms.idf'  # building energy model (BEM) IDF file
-ep_weather_path = r'DNK_Copenhagen.061800_IWEC.epw'  # EPW weather file
+ep_path = r"/usr/local/EnergyPlus-22-1-0" #(Linux example)
+idf_file_name = r"sdu_damper_all_rooms.idf"  # building energy model (BEM) IDF file
+ep_weather_path = r"DNK_Copenhagen.061800_IWEC.epw"  # EPW weather file
 cvs_output_path = r"Dataframes/dataframes_output_test.csv" # Output .csv Path
 
 """

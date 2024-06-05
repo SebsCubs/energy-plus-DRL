@@ -1,3 +1,10 @@
+#ep_path = 'C:\EnergyPlusV22-1-0'  # path to E+ on system
+ep_path = r"/usr/local/EnergyPlus-22-1-0" #(Linux example)
+idf_file_name = r'BEMFiles/sdu_damper_all_rooms_dec_test.idf' 
+ep_weather_path = r'BEMFiles/DNK_Dec.epw' 
+cvs_output_path = r'Dataframes/dataframes_output_model.csv'
+model_path = r'Models/20240605-130843_A3C_0.001_Actor.h5'
+
 """
 Author: Sebastian Cubides
 
@@ -14,19 +21,6 @@ import datetime
 import matplotlib.pyplot as plt
 from keras.api.models import load_model
 
-# -- FILE PATHS --
-# * E+ Download Path *
-ep_path = 'C:\EnergyPlusV22-1-0'  # path to E+ on system
-# IDF File / Modification Paths
-idf_file_name = r'BEMFiles/sdu_damper_all_rooms_dec_test.idf' 
-# Weather Path
-ep_weather_path = r'BEMFiles/DNK_Dec.epw'  # EPW weather file
-# Output .csv Path (optional)
-cvs_output_path = r'Dataframes/dataframes_output_model.csv'
-
-model_path = r'Models/20240605-130843_A3C_0.001_Actor.h5'
-
-#model_path = r'/home/jun/HVAC/energy-plus-DRL/sdu_model_use_cases/Models/SDU_Building_A2C_First_1000eps.h5'
 
 # STATE SPACE (& Auxiliary Simulation Data)
 

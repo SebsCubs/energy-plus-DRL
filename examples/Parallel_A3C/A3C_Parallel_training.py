@@ -1,3 +1,9 @@
+#ep_path = 'C:\EnergyPlusV22-1-0' # path to E+ on system (Windows example)
+ep_path = r"/usr/local/EnergyPlus-22-1-0" #(Linux example)
+idf_file_name = r'BEMFiles\sdu_damper_all_rooms.idf' 
+ep_weather_path = r'BEMFiles\DNK_Jan_Feb.epw'
+cvs_output_path = r'Dataframes\dataframes_output_test.csv'
+
 """
 Author: Sebastian Cubides
 """
@@ -27,11 +33,8 @@ matplotlib.use('Agg') # For saving in a headless program. Must be before importi
 import matplotlib.pyplot as plt
 start_time = time.time()
 # -- FILE PATHS --
-ep_path = 'C:\EnergyPlusV22-1-0'
 script_directory = os.path.dirname(os.path.abspath(__file__))
-idf_file_name = r'BEMFiles\sdu_damper_all_rooms.idf' 
-ep_weather_path = r'BEMFiles\DNK_Jan_Feb.epw'
-cvs_output_path = r'Dataframes\dataframes_output_test.csv'
+
 ####################### RL model and class  #################
 def A2CModels(input_shape, action_space, lr):
     X_input = Input(shape=input_shape)
@@ -221,20 +224,20 @@ class Energyplus_manager:
         )
         
         
-        """
+        
         devnull = open('/dev/null', 'w')#To make e+ shut up!
         orig_stdout_fd = os.dup(1)
         orig_stderr_fd = os.dup(2)
         os.dup2(devnull.fileno(), 1)
         os.dup2(devnull.fileno(), 2)
-        """
+        
         self.run_simulation()
-        """
+        
         os.dup2(orig_stdout_fd, 1) #Restoring stdout
         os.dup2(orig_stderr_fd, 2)
         os.close(orig_stdout_fd)
         os.close(orig_stderr_fd)
-         """
+        
 
         self.run_neural_net()
         with lock:
