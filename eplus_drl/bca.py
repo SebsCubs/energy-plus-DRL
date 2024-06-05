@@ -1,6 +1,6 @@
 import pandas as pd
 
-from emspy import EmsPy
+from eplus_drl import EmsPy
 import os
 
 

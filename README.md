@@ -1,8 +1,8 @@
- # RL - EmsPy (work in progress...)
-### The EmsPy Python package was made to facilitate Reinforcement Learning (RL) algorithm research for developing and testing Building Control Agents (BCAs) for intelligent building and HVAC automation using EnergyPlus's (E+) building energy simulator and wrapping their Energy Management System (EMS) Python API. 
+# eplus-DRL
 
-*This repo was constructed by someone with little experience with EnergyPlus and software/programming, but wanted to 
-assist in creating a simplistic but flexible building 'environment' interface for RL building control research. Any feedback or improvements to the repo is welcomed.* 
+### This library was created to allow for quick prototyping, training and testing of building control strategies based on Deep Reinforcement Learning (DRL). It is heavily inspired by mechyai's [RL-EmsPy library](https://github.com/mechyai/RL-EmsPy). I attempted to provide a more streamlined process to create different control strategies, enable parallelization, plotting, versioning and a more complete release in general.
+
+*Any feedback or improvements to the repo are welcome.* 
 
 ### Introduction
 
@@ -41,10 +41,10 @@ to resemble OpenAI's Gym Environment API. This standardization building models a
 - EnergyPlus EMS Python API 0.2 (included in E+ 9.5 download)
 - Python >= 3.8 
 - pyenergyplus Python package (included in E+ download)
-- [openstudio Python package](https://pypi.org/project/openstudio/) (not currently used, but plan to add functionality)
+- numpy, pandas, matplotlib
+- TensorFlow
 
-### Other Helpful E+ Software Tools:
-- [OpenStudio SDK](https://openstudio-sdk-documentation.s3.amazonaws.com/index.html)
+For a complete list of the dependencies, see "setup.py" in the main folder of this repository.
 
 ### Overview
 
@@ -342,6 +342,3 @@ plt.title('Zn0 Temps and Thermostat Setpoint for Year')
 
 <img src="https://user-images.githubusercontent.com/65429130/158045876-da914d81-f705-43c6-9815-5c5c5cff9778.PNG" width = "750">
 
-
-### References:
-- *(in progress)*
