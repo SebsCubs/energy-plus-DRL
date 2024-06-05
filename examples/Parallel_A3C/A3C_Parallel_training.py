@@ -1,8 +1,11 @@
-#ep_path = 'C:\EnergyPlusV22-1-0' # path to E+ on system (Windows example)
+#ep_path = r"C:\EnergyPlusV22-1-0" # path to E+ on system (Windows example)
 ep_path = r"/usr/local/EnergyPlus-22-1-0" #(Linux example)
-idf_file_name = r'BEMFiles\sdu_damper_all_rooms.idf' 
-ep_weather_path = r'BEMFiles\DNK_Jan_Feb.epw'
-cvs_output_path = r'Dataframes\dataframes_output_test.csv'
+idf_file_name = r"BEMFiles/sdu_damper_all_rooms.idf" 
+ep_weather_path = r"BEMFiles/DNK_Jan_Feb.epw"
+cvs_output_path = r"Dataframes/dataframes_output_test.csv"
+number_of_subprocesses = 8
+number_of_episodes = 1000
+eplus_verbose = 0 # 0 only linux
 
 """
 Author: Sebastian Cubides
@@ -59,7 +62,7 @@ class A2C_agent:
         self.scores, self.episodes, self.average = [], [], []
         self.score = 0
         self.episode = 0
-        self.EPISODES = 1000
+        self.EPISODES = number_of_episodes
         self.max_average = -99999999999
         self.Save_Path = 'Models'
         if not os.path.exists(self.Save_Path): os.makedirs(self.Save_Path)
@@ -223,21 +226,24 @@ class Energyplus_manager:
             update_actuation_frequency=1  # linked to actuation update
         )
         
-        
-        
-        devnull = open('/dev/null', 'w')#To make e+ shut up!
-        orig_stdout_fd = os.dup(1)
-        orig_stderr_fd = os.dup(2)
-        os.dup2(devnull.fileno(), 1)
-        os.dup2(devnull.fileno(), 2)
-        
-        self.run_simulation()
-        
-        os.dup2(orig_stdout_fd, 1) #Restoring stdout
-        os.dup2(orig_stderr_fd, 2)
-        os.close(orig_stdout_fd)
-        os.close(orig_stderr_fd)
-        
+        if eplus_verbose == 2:
+            self.run_simulation()
+        elif eplus_verbose == 1:
+            self.run_simulation()    
+        elif eplus_verbose == 0 :
+            devnull = open(os.devnull, 'w')
+            orig_stdout_fd = os.dup(1)
+            orig_stderr_fd = os.dup(2)
+            os.dup2(devnull.fileno(), 1)
+            os.dup2(devnull.fileno(), 2)             
+            self.run_simulation()
+            os.dup2(orig_stdout_fd, 1) #Restoring stdout
+            os.dup2(orig_stderr_fd, 2)
+            os.close(orig_stdout_fd)
+            os.close(orig_stderr_fd)
+        else:
+            raise ValueError("eplus_verbose must be 0, 1 or 2")
+            
 
         self.run_neural_net()
         with lock:
@@ -335,9 +341,9 @@ if __name__ == "__main__":
         with CustomManager() as manager:
             shared_a2c_object = manager.A2C_agent()
             EPISODES = shared_a2c_object.get_EPISODES()
-            with Pool(processes=8, maxtasksperchild = 3) as pool:
+            with Pool(processes=number_of_subprocesses, maxtasksperchild = 3) as pool:
                 for index in range(EPISODES):
-                    pool.apply_async(run_one_manger, args=(index, shared_a2c_object, lock,))
+                    pool.apply_async(run_one_manger, args=(index, shared_a2c_object, lock))
                 pool.close()
                 pool.join()
             end_time = time.time()
