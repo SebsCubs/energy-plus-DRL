@@ -1,11 +1,11 @@
-#ep_path = r"C:\EnergyPlusV22-1-0" # path to E+ on system (Windows example)
-ep_path = r"/usr/local/EnergyPlus-22-1-0" #(Linux example)
+ep_path = r"C:\EnergyPlusV22-1-0" # path to E+ on system (Windows example)
+#ep_path = r"/usr/local/EnergyPlus-22-1-0" #(Linux example)
 idf_file_name = r"BEMFiles/sdu_damper_all_rooms.idf" 
 ep_weather_path = r"BEMFiles/DNK_Jan_Feb.epw"
 cvs_output_path = r"Dataframes/dataframes_output_test.csv"
-number_of_subprocesses = 8
-number_of_episodes = 1000
-eplus_verbose = 0 # 0 only linux
+number_of_subprocesses = 1
+number_of_episodes = 10
+eplus_verbose = 1 # 0 only linux
 
 """
 Author: Sebastian Cubides
@@ -29,9 +29,14 @@ from eplus_drl import EmsPy, BcaEnv
 import datetime
 import time
 from keras import Model
-from keras.api.layers import Input, Dense, Flatten
-from keras.api.optimizers import Adam
+from keras.layers import Input, Dense, Flatten
+from keras.optimizers import Adam
+from keras.models import load_model
 import matplotlib
+from keras import Model
+from keras.layers import Input, Dense, Flatten
+from keras.optimizers import Adam
+from keras.models import load_model
 matplotlib.use('Agg') # For saving in a headless program. Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 start_time = time.time()
@@ -46,9 +51,7 @@ def A2CModels(input_shape, action_space, lr):
     action = Dense(action_space, activation="softmax", kernel_initializer='he_uniform')(X_hid2)
     value = Dense(1, kernel_initializer='he_uniform')(X_hid2)
     Actor = Model(inputs = X_input, outputs = action)
-    Actor.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=lr))
     Critic = Model(inputs = X_input, outputs = value)
-    Critic.compile(loss='mse', optimizer=Adam(learning_rate=lr))
     return Actor, Critic
 
 class A2C_agent:
@@ -71,11 +74,23 @@ class A2C_agent:
         self.state = None
         self.time_of_day = None
 
+    def compile_models(self):
+        self.Actor.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=self.lr))
+        self.Critic.compile(loss='mse', optimizer=Adam(learning_rate=self.lr))
+    
     def copy(self):
         new = A2C_agent()
-        new.Actor.set_weights(self.Actor.get_weights())
-        new.Critic.set_weights(self.Critic.get_weights())
-        new.episode = self.episode
+    
+        # Save and load Actor model weights
+        self.Actor.save_weights('temp_actor_weights.h5')
+        new.Actor.load_weights('temp_actor_weights.h5')
+        os.remove('temp_actor_weights.h5')
+    
+        # Save and load Critic model weights
+        self.Critic.save_weights('temp_critic_weights.h5')
+        new.Critic.load_weights('temp_critic_weights.h5')
+        os.remove('temp_critic_weights.h5')
+        
         return new
 
     def get_EPISODES(self):
@@ -340,6 +355,7 @@ if __name__ == "__main__":
         lock = global_manager.Lock()
         with CustomManager() as manager:
             shared_a2c_object = manager.A2C_agent()
+            shared_a2c_object.compile_models()
             EPISODES = shared_a2c_object.get_EPISODES()
             with Pool(processes=number_of_subprocesses, maxtasksperchild = 3) as pool:
                 for index in range(EPISODES):
