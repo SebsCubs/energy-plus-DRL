@@ -29,14 +29,10 @@ from eplus_drl import EmsPy, BcaEnv
 import datetime
 import time
 from keras import Model
-from keras.layers import Input, Dense, Flatten
-from keras.optimizers import Adam
-from keras.models import load_model
+from keras.api.layers import Input, Dense, Flatten
+from keras.api.optimizers import Adam
+from keras.api.models import load_model
 import matplotlib
-from keras import Model
-from keras.layers import Input, Dense, Flatten
-from keras.optimizers import Adam
-from keras.models import load_model
 matplotlib.use('Agg') # For saving in a headless program. Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 start_time = time.time()
@@ -52,6 +48,8 @@ def A2CModels(input_shape, action_space, lr):
     value = Dense(1, kernel_initializer='he_uniform')(X_hid2)
     Actor = Model(inputs = X_input, outputs = action)
     Critic = Model(inputs = X_input, outputs = value)
+    Actor.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=lr))
+    Critic.compile(loss='mse', optimizer=Adam(learning_rate=lr))
     return Actor, Critic
 
 class A2C_agent:
@@ -74,23 +72,25 @@ class A2C_agent:
         self.state = None
         self.time_of_day = None
 
-    def compile_models(self):
-        self.Actor.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=self.lr))
-        self.Critic.compile(loss='mse', optimizer=Adam(learning_rate=self.lr))
     
     def copy(self):
         new = A2C_agent()
     
-        # Save and load Actor model weights
-        self.Actor.save_weights('temp_actor_weights.h5')
-        new.Actor.load_weights('temp_actor_weights.h5')
-        os.remove('temp_actor_weights.h5')
+        # Create new models with the same architecture as Actor and Critic
+        new.Actor = tf.keras.models.clone_model(self.Actor)
+        new.Critic = tf.keras.models.clone_model(self.Critic)
     
-        # Save and load Critic model weights
-        self.Critic.save_weights('temp_critic_weights.h5')
-        new.Critic.load_weights('temp_critic_weights.h5')
-        os.remove('temp_critic_weights.h5')
-        
+        # Set weights of the new models to the weights of the old models
+        new.Actor.set_weights(self.Actor.get_weights())
+        new.Critic.set_weights(self.Critic.get_weights())
+
+        # Compile the new models
+        new.Actor.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=self.lr))
+        new.Critic.compile(loss='mse', optimizer=Adam(learning_rate=self.lr))
+
+        # Copy episode
+        new.episode = self.episode
+    
         return new
 
     def get_EPISODES(self):
@@ -134,6 +134,9 @@ class A2C_agent:
         return discounted_r
 
     def replay(self):
+        if self.Actor.optimizer is None or self.Critic.optimizer is None:
+            raise Exception("Models are not compiled")
+    
         states = np.vstack(self.states)
         actions = np.vstack(self.actions)
         self.score = np.sum(self.rewards)
@@ -182,6 +185,7 @@ class Energyplus_manager:
     def __init__(self, episode, a2c_object:A2C_agent,lock):
         self.global_a2c_object = a2c_object
         self.local_a2c_object = self.global_a2c_object.copy()
+
         self.episode = episode
         self.a2c_state = None
         self.step_reward = 0  
@@ -259,7 +263,6 @@ class Energyplus_manager:
         else:
             raise ValueError("eplus_verbose must be 0, 1 or 2")
             
-
         self.run_neural_net()
         with lock:
             self.local_a2c_object.update_global(self.global_a2c_object)
@@ -355,7 +358,6 @@ if __name__ == "__main__":
         lock = global_manager.Lock()
         with CustomManager() as manager:
             shared_a2c_object = manager.A2C_agent()
-            shared_a2c_object.compile_models()
             EPISODES = shared_a2c_object.get_EPISODES()
             with Pool(processes=number_of_subprocesses, maxtasksperchild = 3) as pool:
                 for index in range(EPISODES):

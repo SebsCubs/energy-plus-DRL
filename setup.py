@@ -19,7 +19,7 @@ setup(
         'pytz==2024.1',
         'six==1.16.0',
         'tzdata==2024.1',
-        'tensorflow==2.12.0',  
+        'tensorflow==2.16.1',  
         'absl-py>=1.4.0',  
     ],
     author='Sebastian Cubides',
