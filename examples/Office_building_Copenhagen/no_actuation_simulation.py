@@ -3,7 +3,7 @@
 ep_path = r'/usr/local/EnergyPlus-22-1-0' #(Linux example)
 idf_file_name = r'sdu_damper_all_rooms.idf'  # building energy model (BEM) IDF file
 ep_weather_path = r'DNK_Copenhagen.061800_IWEC.epw'  # EPW weather file
-cvs_output_path = r'Dataframes\dataframes_output_test.csv' # Output .csv Path
+cvs_output_path = r"Dataframes/dataframes_output_test.csv" # Output .csv Path
 
 """
 Author: Sebastian Cubides (SebsCubs)
