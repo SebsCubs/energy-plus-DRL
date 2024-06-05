@@ -16,22 +16,22 @@ import absl.logging
 absl.logging.set_verbosity(absl.logging.ERROR)
 import sys
 import numpy as np
-from emspy import EmsPy, BcaEnv
+from eplus_drl import EmsPy, BcaEnv
 import datetime
 import time
-from keras.models import Model
-from keras.layers import Input, Dense, Flatten
-from keras.optimizers import Adam
+from keras import Model
+from keras.api.layers import Input, Dense, Flatten
+from keras.api.optimizers import Adam
 import matplotlib
 matplotlib.use('Agg') # For saving in a headless program. Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 start_time = time.time()
 # -- FILE PATHS --
-ep_path = '/usr/local/EnergyPlus-22-1-0'
+ep_path = 'C:\EnergyPlusV22-1-0'
 script_directory = os.path.dirname(os.path.abspath(__file__))
-idf_file_name = r'xxxxxxxxx' 
-ep_weather_path = r'xxxxxxxx'
-cvs_output_path = r'xxxxxxxxx'
+idf_file_name = r'BEMFiles\sdu_damper_all_rooms.idf' 
+ep_weather_path = r'BEMFiles\DNK_Jan_Feb.epw'
+cvs_output_path = r'Dataframes\dataframes_output_test.csv'
 ####################### RL model and class  #################
 def A2CModels(input_shape, action_space, lr):
     X_input = Input(shape=input_shape)
@@ -128,7 +128,7 @@ class A2C_agent:
     
     def evaluate_model(self):
         self.average.append(sum(self.scores[-50:]) / len(self.scores[-50:]))
-        if __name__ == "__main__":
+        if __name__ == "__main__" or __name__ == "__mp_main__": #mp_main is for windows
             if str(self.episode)[-1:] == "0":# much faster than episode % 100
                 try:      
                     fig, ax = plt.subplots() # fig : figure object, ax : Axes object              
@@ -219,16 +219,23 @@ class Energyplus_manager:
             update_observation_frequency=1,  # linked to observation update
             update_actuation_frequency=1  # linked to actuation update
         )
+        
+        
+        """
         devnull = open('/dev/null', 'w')#To make e+ shut up!
         orig_stdout_fd = os.dup(1)
         orig_stderr_fd = os.dup(2)
         os.dup2(devnull.fileno(), 1)
         os.dup2(devnull.fileno(), 2)
+        """
         self.run_simulation()
+        """
         os.dup2(orig_stdout_fd, 1) #Restoring stdout
         os.dup2(orig_stderr_fd, 2)
         os.close(orig_stdout_fd)
         os.close(orig_stderr_fd)
+         """
+
         self.run_neural_net()
         with lock:
             self.local_a2c_object.update_global(self.global_a2c_object)
@@ -325,7 +332,7 @@ if __name__ == "__main__":
         with CustomManager() as manager:
             shared_a2c_object = manager.A2C_agent()
             EPISODES = shared_a2c_object.get_EPISODES()
-            with Pool(processes=10, maxtasksperchild = 3) as pool:
+            with Pool(processes=8, maxtasksperchild = 3) as pool:
                 for index in range(EPISODES):
                     pool.apply_async(run_one_manger, args=(index, shared_a2c_object, lock,))
                 pool.close()
