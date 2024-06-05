@@ -3590,7 +3590,8 @@ Sizing:Parameters,
   1.15;                                   !- Cooling Sizing Factor
 
 ZoneAirContaminantBalance,
-  No;                                     !- Carbon Dioxide Concentration
+  Yes,                                     !- Carbon Dioxide Concentration
+  Always On Continuous;
 
 ZoneAirHeatBalanceAlgorithm,
   ThirdOrderBackwardDifference;           !- Algorithm
@@ -4876,7 +4877,7 @@ Schedule:Constant,
 Schedule:Constant,
   Always On Continuous,                   !- Name
   ,                                       !- Schedule Type Limits Name
-  1;                                      !- Hourly Value
+  410;                                      !- Hourly Value
 
 OutdoorAir:Node,
   Model Outdoor Air Node;                 !- Name

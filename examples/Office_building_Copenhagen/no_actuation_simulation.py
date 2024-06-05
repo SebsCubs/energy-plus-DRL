@@ -1,32 +1,18 @@
-"""
-Author: Sebastian Cubides
+# -- FILE PATHS -- (modify these to your local paths, This format should be OS agnostic, can use any kind of slash) #
+#ep_path = r'C:\EnergyPlusV22-1-0'  # path to E+ on system (Windows example)
+ep_path = r"/usr/local/EnergyPlus-22-1-0" #(Linux example)
+idf_file_name = r"sdu_damper_all_rooms.idf"  # building energy model (BEM) IDF file
+ep_weather_path = r"DNK_Copenhagen.061800_IWEC.epw"  # EPW weather file
+cvs_output_path = r"Dataframes/dataframes_output_test.csv" # Output .csv Path
 
 """
+Author: Sebastian Cubides (SebsCubs)
+"""
 
-
-import sys
-
-sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0')
-
-from pyenergyplus import api #Importing from folder, therefore a warning may show
-from pyenergyplus.api import EnergyPlusAPI
-from emspy import EmsPy, BcaEnv
+from eplus_drl import BcaEnv, EmsPy
 import datetime
 import matplotlib.pyplot as plt
 import tkinter
-
-
-
-# -- FILE PATHS --
-# * E+ Download Path *
-ep_path = 'C:\EnergyPlusV22-1-0'  # path to E+ on system
-# IDF File / Modification Paths
-idf_file_name = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/sdu_double_heating_dec_test.idf'  # building energy model (BEM) IDF file
-# Weather Path
-ep_weather_path = r'/home/jun/HVAC/energy-plus-DRL/BEMFiles/DNK_Dec.epw'  # EPW weather file
-# Output .csv Path (optional)
-cvs_output_path = r'/home/jun/HVAC/energy-plus-DRL/Dataframes/dataframes_output_test.csv'
-
 
 # STATE SPACE (& Auxiliary Simulation Data)
 
@@ -63,7 +49,6 @@ tc_weather = {
     'wind_dir': ('wind_direction'),  # deg
     'wind_speed': ('wind_speed')  # m/s
 }
-
 
 # ACTION SPACE
 tc_actuators = {
@@ -102,8 +87,9 @@ class Agent:
         self.bca = bca
 
         # simulation data state
-        self.zn0_temp = None  # deg C
         self.time = None
+
+        self.zn0_temp = None  # deg C
         self.fan_mass_flow = None  # kg/s
         self.re_heating_vav_energy = None  # deg C
         self.pre_heating_coil_energy = None # deg C
@@ -125,6 +111,7 @@ class Agent:
             # Get data from simulation at current timestep (and calling point) using ToC names
             var_data = self.bca.get_ems_data(list(self.bca.tc_var.keys()))
             weather_data = self.bca.get_ems_data(list(self.bca.tc_weather.keys()), return_dict=True)
+
             # get specific values from MdpManager based on name
             self.zn0_temp = var_data[0]  
             self.fan_mass_flow = var_data[1]
@@ -185,8 +172,8 @@ output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data col
 
 # -- Plot Results --
 fig, ax = plt.subplots()
-output_dfs['var'].plot(y='air_loop_fan_electric_power', use_index=True, ax=ax)
+output_dfs['var'].plot(y='zn0_temp', use_index=True, ax=ax)
 #output_dfs['var'].plot(y='pmv', use_index=True, ax=ax)
-plt.title('Fan electric power usage')
+plt.title('Zone0 temperature')
 plt.show()
 # Analyze results in "out" folder, DView, or directly from your Python variables and Pandas Dataframes

@@ -26,12 +26,15 @@ out
 *.log
 example_usage
 *.egg-info
-*.h5
-Models
+#*.h5
+#Models
 Energyplus_temp
 #ignore csv datasets
 Dataframes
 *.csv
+#ignore the library build outputs
+build
+dist
 
 # now that we have python, ignore some things
 **.pyc

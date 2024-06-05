@@ -584,7 +584,7 @@ AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat,
   ,                                       !- Availability Schedule Name
   Changeover Bypass HW Rht Damper Outlet Node, !- Damper Air Outlet Node Name
   Node 33,                                !- Air Inlet Node Name
-  AutoSize,                               !- Maximum Air Flow Rate {m3/s}
+  0.285867,                               !- Maximum Air Flow Rate {m3/s}
   0,                                      !- Zone Minimum Air Flow Fraction
   Coil:Heating:Water,                     !- Reheat Coil Object Type
   Changeover Bypass HW Rht Coil,          !- Reheat Coil Name
@@ -597,14 +597,14 @@ AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat,
 Coil:Heating:Water,
   Changeover Bypass HW Rht Coil,          !- Name
   Always On Discrete hvac_library,        !- Availability Schedule Name
-  Autosize,                               !- U-Factor Times Area Value {W/K}
-  Autosize,                               !- Maximum Water Flow Rate {m3/s}
+  164,                                    !- U-Factor Times Area Value {W/K}
+  0.000163,                               !- Maximum Water Flow Rate {m3/s}
   Node 59,                                !- Water Inlet Node Name
   Node 60,                                !- Water Outlet Node Name
   Changeover Bypass HW Rht Damper Outlet Node, !- Air Inlet Node Name
   Node 13,                                !- Air Outlet Node Name
   UFactorTimesAreaAndDesignWaterFlowRate, !- Performance Input Method
-  Autosize,                               !- Rated Capacity {W}
+  7377.64,                                !- Rated Capacity {W}
   82.2,                                   !- Rated Inlet Water Temperature {C}
   16.6,                                   !- Rated Inlet Air Temperature {C}
   71.1,                                   !- Rated Outlet Water Temperature {C}
@@ -1072,50 +1072,53 @@ NodeList,
   Thermal Zone 2 Return Node List,        !- Name
   Node 41;                                !- Node Name 1
 
-ZoneHVAC:Baseboard:Convective:Water,
-  HW Baseboard 1,                         !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 17,                                !- Inlet Node Name
-  Node 18,                                !- Outlet Node Name
-  HeatingDesignCapacity,                  !- Heating Design Capacity Method
-  Autosize,                               !- Heating Design Capacity {W}
-  0,                                      !- Heating Design Capacity Per Floor Area {W/m2}
-  0.8,                                    !- Fraction of Autosized Heating Design Capacity
-  157.82,                                 !- U-Factor Times Area Value {W/K}
-  0.000129,                               !- Maximum Water Flow Rate {m3/s}
-  0.001;                                  !- Convergence Tolerance
-
 ZoneHVAC:AirDistributionUnit,
-  ADU VAV No Rht 1,                       !- Name
+  ADU Changeover Bypass HW Rht 1,         !- Name
   Node 40,                                !- Air Distribution Unit Outlet Node Name
-  AirTerminal:SingleDuct:VAV:NoReheat,    !- Air Terminal Object Type
-  VAV No Rht 1;                           !- Air Terminal Name
+  AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat, !- Air Terminal Object Type
+  Changeover Bypass HW Rht 1;             !- Air Terminal Name
 
-AirTerminal:SingleDuct:VAV:NoReheat,
-  VAV No Rht 1,                           !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 40,                                !- Air Outlet Node Name
+AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat,
+  Changeover Bypass HW Rht 1,             !- Name
+  ,                                       !- Availability Schedule Name
+  Changeover Bypass HW Rht 1 Damper Outlet Node, !- Damper Air Outlet Node Name
   Node 42,                                !- Air Inlet Node Name
   0.249923,                               !- Maximum Air Flow Rate {m3/s}
-  Constant,                               !- Zone Minimum Air Flow Input Method
-  0.3,                                    !- Constant Minimum Air Flow Fraction
-  Autosize;                               !- Fixed Minimum Air Flow Rate {m3/s}
+  0,                                      !- Zone Minimum Air Flow Fraction
+  Coil:Heating:Water,                     !- Reheat Coil Object Type
+  Changeover Bypass HW Rht Coil 1,        !- Reheat Coil Name
+  AutoSize,                               !- Maximum Hot Water or Steam Flow Rate {m3/s}
+  0,                                      !- Minimum Hot Water or Steam Flow Rate {m3/s}
+  Node 40,                                !- Air Outlet Node Name
+  0.001,                                  !- Convergence Tolerance
+  1000;                                   !- Maximum Reheat Air Temperature {C}
+
+Coil:Heating:Water,
+  Changeover Bypass HW Rht Coil 1,        !- Name
+  Always On Discrete hvac_library,        !- Availability Schedule Name
+  143.11,                                 !- U-Factor Times Area Value {W/K}
+  0.000142,                               !- Maximum Water Flow Rate {m3/s}
+  Node 73,                                !- Water Inlet Node Name
+  Node 74,                                !- Water Outlet Node Name
+  Changeover Bypass HW Rht 1 Damper Outlet Node, !- Air Inlet Node Name
+  Node 40,                                !- Air Outlet Node Name
+  UFactorTimesAreaAndDesignWaterFlowRate, !- Performance Input Method
+  6440.12,                                !- Rated Capacity {W}
+  82.2,                                   !- Rated Inlet Water Temperature {C}
+  16.6,                                   !- Rated Inlet Air Temperature {C}
+  71.1,                                   !- Rated Outlet Water Temperature {C}
+  32.2,                                   !- Rated Outlet Air Temperature {C}
+  0.5;                                    !- Rated Ratio for Air and Water Convection
 
 ZoneHVAC:EquipmentList,
   Thermal Zone 2 Equipment List,          !- Name
   SequentialLoad,                         !- Load Distribution Scheme
-  ZoneHVAC:Baseboard:Convective:Water,    !- Zone Equipment Object Type 1
-  HW Baseboard 1,                         !- Zone Equipment Name 1
+  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 1
+  ADU Changeover Bypass HW Rht 1,         !- Zone Equipment Name 1
   1,                                      !- Zone Equipment Cooling Sequence 1
   1,                                      !- Zone Equipment Heating or No-Load Sequence 1
   ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 1
-  ,                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
-  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 2
-  ADU VAV No Rht 1,                       !- Zone Equipment Name 2
-  2,                                      !- Zone Equipment Cooling Sequence 2
-  2,                                      !- Zone Equipment Heating or No-Load Sequence 2
-  ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 2
-  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 2
+  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
 
 Sizing:Zone,
   Thermal Zone 2,                         !- Zone or ZoneList Name
@@ -1477,50 +1480,53 @@ NodeList,
   Thermal Zone 3 Return Node List,        !- Name
   Node 44;                                !- Node Name 1
 
-ZoneHVAC:Baseboard:Convective:Water,
-  HW Baseboard 2,                         !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 19,                                !- Inlet Node Name
-  Node 20,                                !- Outlet Node Name
-  HeatingDesignCapacity,                  !- Heating Design Capacity Method
-  Autosize,                               !- Heating Design Capacity {W}
-  0,                                      !- Heating Design Capacity Per Floor Area {W/m2}
-  0.8,                                    !- Fraction of Autosized Heating Design Capacity
-  131.95,                                 !- U-Factor Times Area Value {W/K}
-  0.000115,                               !- Maximum Water Flow Rate {m3/s}
-  0.001;                                  !- Convergence Tolerance
-
 ZoneHVAC:AirDistributionUnit,
-  ADU VAV No Rht 2,                       !- Name
+  ADU Changeover Bypass HW Rht 2,         !- Name
   Node 43,                                !- Air Distribution Unit Outlet Node Name
-  AirTerminal:SingleDuct:VAV:NoReheat,    !- Air Terminal Object Type
-  VAV No Rht 2;                           !- Air Terminal Name
+  AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat, !- Air Terminal Object Type
+  Changeover Bypass HW Rht 2;             !- Air Terminal Name
 
-AirTerminal:SingleDuct:VAV:NoReheat,
-  VAV No Rht 2,                           !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 43,                                !- Air Outlet Node Name
+AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat,
+  Changeover Bypass HW Rht 2,             !- Name
+  ,                                       !- Availability Schedule Name
+  Changeover Bypass HW Rht 2 Damper Outlet Node, !- Damper Air Outlet Node Name
   Node 45,                                !- Air Inlet Node Name
   0.223295,                               !- Maximum Air Flow Rate {m3/s}
-  Constant,                               !- Zone Minimum Air Flow Input Method
-  0.3,                                    !- Constant Minimum Air Flow Fraction
-  Autosize;                               !- Fixed Minimum Air Flow Rate {m3/s}
+  0,                                      !- Zone Minimum Air Flow Fraction
+  Coil:Heating:Water,                     !- Reheat Coil Object Type
+  Changeover Bypass HW Rht Coil 2,        !- Reheat Coil Name
+  AutoSize,                               !- Maximum Hot Water or Steam Flow Rate {m3/s}
+  0,                                      !- Minimum Hot Water or Steam Flow Rate {m3/s}
+  Node 43,                                !- Air Outlet Node Name
+  0.001,                                  !- Convergence Tolerance
+  1000;                                   !- Maximum Reheat Air Temperature {C}
+
+Coil:Heating:Water,
+  Changeover Bypass HW Rht Coil 2,        !- Name
+  Always On Discrete hvac_library,        !- Availability Schedule Name
+  127.86,                                 !- U-Factor Times Area Value {W/K}
+  0.000127,                               !- Maximum Water Flow Rate {m3/s}
+  Node 71,                                !- Water Inlet Node Name
+  Node 72,                                !- Water Outlet Node Name
+  Changeover Bypass HW Rht 2 Damper Outlet Node, !- Air Inlet Node Name
+  Node 43,                                !- Air Outlet Node Name
+  UFactorTimesAreaAndDesignWaterFlowRate, !- Performance Input Method
+  5753.97,                                !- Rated Capacity {W}
+  82.2,                                   !- Rated Inlet Water Temperature {C}
+  16.6,                                   !- Rated Inlet Air Temperature {C}
+  71.1,                                   !- Rated Outlet Water Temperature {C}
+  32.2,                                   !- Rated Outlet Air Temperature {C}
+  0.5;                                    !- Rated Ratio for Air and Water Convection
 
 ZoneHVAC:EquipmentList,
   Thermal Zone 3 Equipment List,          !- Name
   SequentialLoad,                         !- Load Distribution Scheme
-  ZoneHVAC:Baseboard:Convective:Water,    !- Zone Equipment Object Type 1
-  HW Baseboard 2,                         !- Zone Equipment Name 1
+  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 1
+  ADU Changeover Bypass HW Rht 2,         !- Zone Equipment Name 1
   1,                                      !- Zone Equipment Cooling Sequence 1
   1,                                      !- Zone Equipment Heating or No-Load Sequence 1
   ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 1
-  ,                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
-  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 2
-  ADU VAV No Rht 2,                       !- Zone Equipment Name 2
-  2,                                      !- Zone Equipment Cooling Sequence 2
-  2,                                      !- Zone Equipment Heating or No-Load Sequence 2
-  ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 2
-  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 2
+  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
 
 Sizing:Zone,
   Thermal Zone 3,                         !- Zone or ZoneList Name
@@ -2164,50 +2170,53 @@ NodeList,
   Thermal Zone 4 Return Node List,        !- Name
   Node 47;                                !- Node Name 1
 
-ZoneHVAC:Baseboard:Convective:Water,
-  HW Baseboard 3,                         !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 21,                                !- Inlet Node Name
-  Node 22,                                !- Outlet Node Name
-  HeatingDesignCapacity,                  !- Heating Design Capacity Method
-  Autosize,                               !- Heating Design Capacity {W}
-  0,                                      !- Heating Design Capacity Per Floor Area {W/m2}
-  0.8,                                    !- Fraction of Autosized Heating Design Capacity
-  203.62,                                 !- U-Factor Times Area Value {W/K}
-  0.000149,                               !- Maximum Water Flow Rate {m3/s}
-  0.001;                                  !- Convergence Tolerance
-
 ZoneHVAC:AirDistributionUnit,
-  ADU VAV No Rht 3,                       !- Name
+  ADU Changeover Bypass HW Rht 3,         !- Name
   Node 46,                                !- Air Distribution Unit Outlet Node Name
-  AirTerminal:SingleDuct:VAV:NoReheat,    !- Air Terminal Object Type
-  VAV No Rht 3;                           !- Air Terminal Name
+  AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat, !- Air Terminal Object Type
+  Changeover Bypass HW Rht 3;             !- Air Terminal Name
 
-AirTerminal:SingleDuct:VAV:NoReheat,
-  VAV No Rht 3,                           !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 46,                                !- Air Outlet Node Name
+AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat,
+  Changeover Bypass HW Rht 3,             !- Name
+  ,                                       !- Availability Schedule Name
+  Changeover Bypass HW Rht 3 Damper Outlet Node, !- Damper Air Outlet Node Name
   Node 48,                                !- Air Inlet Node Name
   0.289153,                               !- Maximum Air Flow Rate {m3/s}
-  Constant,                               !- Zone Minimum Air Flow Input Method
-  0.3,                                    !- Constant Minimum Air Flow Fraction
-  Autosize;                               !- Fixed Minimum Air Flow Rate {m3/s}
+  0,                                      !- Zone Minimum Air Flow Fraction
+  Coil:Heating:Water,                     !- Reheat Coil Object Type
+  Changeover Bypass HW Rht Coil 3,        !- Reheat Coil Name
+  AutoSize,                               !- Maximum Hot Water or Steam Flow Rate {m3/s}
+  0,                                      !- Minimum Hot Water or Steam Flow Rate {m3/s}
+  Node 46,                                !- Air Outlet Node Name
+  0.001,                                  !- Convergence Tolerance
+  1000;                                   !- Maximum Reheat Air Temperature {C}
+
+Coil:Heating:Water,
+  Changeover Bypass HW Rht Coil 3,        !- Name
+  Always On Discrete hvac_library,        !- Availability Schedule Name
+  165.58,                                 !- U-Factor Times Area Value {W/K}
+  0.000165,                               !- Maximum Water Flow Rate {m3/s}
+  Node 69,                                !- Water Inlet Node Name
+  Node 70,                                !- Water Outlet Node Name
+  Changeover Bypass HW Rht 3 Damper Outlet Node, !- Air Inlet Node Name
+  Node 46,                                !- Air Outlet Node Name
+  UFactorTimesAreaAndDesignWaterFlowRate, !- Performance Input Method
+  7451.16,                                !- Rated Capacity {W}
+  82.2,                                   !- Rated Inlet Water Temperature {C}
+  16.6,                                   !- Rated Inlet Air Temperature {C}
+  71.1,                                   !- Rated Outlet Water Temperature {C}
+  32.2,                                   !- Rated Outlet Air Temperature {C}
+  0.5;                                    !- Rated Ratio for Air and Water Convection
 
 ZoneHVAC:EquipmentList,
   Thermal Zone 4 Equipment List,          !- Name
   SequentialLoad,                         !- Load Distribution Scheme
-  ZoneHVAC:Baseboard:Convective:Water,    !- Zone Equipment Object Type 1
-  HW Baseboard 3,                         !- Zone Equipment Name 1
+  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 1
+  ADU Changeover Bypass HW Rht 3,         !- Zone Equipment Name 1
   1,                                      !- Zone Equipment Cooling Sequence 1
   1,                                      !- Zone Equipment Heating or No-Load Sequence 1
   ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 1
-  ,                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
-  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 2
-  ADU VAV No Rht 3,                       !- Zone Equipment Name 2
-  2,                                      !- Zone Equipment Cooling Sequence 2
-  2,                                      !- Zone Equipment Heating or No-Load Sequence 2
-  ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 2
-  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 2
+  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
 
 Sizing:Zone,
   Thermal Zone 4,                         !- Zone or ZoneList Name
@@ -2577,50 +2586,53 @@ NodeList,
   Thermal Zone 5 Return Node List,        !- Name
   Node 50;                                !- Node Name 1
 
-ZoneHVAC:Baseboard:Convective:Water,
-  HW Baseboard 4,                         !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 23,                                !- Inlet Node Name
-  Node 24,                                !- Outlet Node Name
-  HeatingDesignCapacity,                  !- Heating Design Capacity Method
-  Autosize,                               !- Heating Design Capacity {W}
-  0,                                      !- Heating Design Capacity Per Floor Area {W/m2}
-  0.8,                                    !- Fraction of Autosized Heating Design Capacity
-  131.74,                                 !- U-Factor Times Area Value {W/K}
-  0.000115,                               !- Maximum Water Flow Rate {m3/s}
-  0.001;                                  !- Convergence Tolerance
-
 ZoneHVAC:AirDistributionUnit,
-  ADU VAV No Rht 4,                       !- Name
+  ADU Changeover Bypass HW Rht 4,         !- Name
   Node 49,                                !- Air Distribution Unit Outlet Node Name
-  AirTerminal:SingleDuct:VAV:NoReheat,    !- Air Terminal Object Type
-  VAV No Rht 4;                           !- Air Terminal Name
+  AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat, !- Air Terminal Object Type
+  Changeover Bypass HW Rht 4;             !- Air Terminal Name
 
-AirTerminal:SingleDuct:VAV:NoReheat,
-  VAV No Rht 4,                           !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 49,                                !- Air Outlet Node Name
+AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat,
+  Changeover Bypass HW Rht 4,             !- Name
+  ,                                       !- Availability Schedule Name
+  Changeover Bypass HW Rht 4 Damper Outlet Node, !- Damper Air Outlet Node Name
   Node 51,                                !- Air Inlet Node Name
   0.223063,                               !- Maximum Air Flow Rate {m3/s}
-  Constant,                               !- Zone Minimum Air Flow Input Method
-  0.3,                                    !- Constant Minimum Air Flow Fraction
-  Autosize;                               !- Fixed Minimum Air Flow Rate {m3/s}
+  0,                                      !- Zone Minimum Air Flow Fraction
+  Coil:Heating:Water,                     !- Reheat Coil Object Type
+  Changeover Bypass HW Rht Coil 4,        !- Reheat Coil Name
+  AutoSize,                               !- Maximum Hot Water or Steam Flow Rate {m3/s}
+  0,                                      !- Minimum Hot Water or Steam Flow Rate {m3/s}
+  Node 49,                                !- Air Outlet Node Name
+  0.001,                                  !- Convergence Tolerance
+  1000;                                   !- Maximum Reheat Air Temperature {C}
+
+Coil:Heating:Water,
+  Changeover Bypass HW Rht Coil 4,        !- Name
+  Always On Discrete hvac_library,        !- Availability Schedule Name
+  127.73,                                 !- U-Factor Times Area Value {W/K}
+  0.000127,                               !- Maximum Water Flow Rate {m3/s}
+  Node 67,                                !- Water Inlet Node Name
+  Node 68,                                !- Water Outlet Node Name
+  Changeover Bypass HW Rht 4 Damper Outlet Node, !- Air Inlet Node Name
+  Node 49,                                !- Air Outlet Node Name
+  UFactorTimesAreaAndDesignWaterFlowRate, !- Performance Input Method
+  5747.99,                                !- Rated Capacity {W}
+  82.2,                                   !- Rated Inlet Water Temperature {C}
+  16.6,                                   !- Rated Inlet Air Temperature {C}
+  71.1,                                   !- Rated Outlet Water Temperature {C}
+  32.2,                                   !- Rated Outlet Air Temperature {C}
+  0.5;                                    !- Rated Ratio for Air and Water Convection
 
 ZoneHVAC:EquipmentList,
   Thermal Zone 5 Equipment List,          !- Name
   SequentialLoad,                         !- Load Distribution Scheme
-  ZoneHVAC:Baseboard:Convective:Water,    !- Zone Equipment Object Type 1
-  HW Baseboard 4,                         !- Zone Equipment Name 1
+  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 1
+  ADU Changeover Bypass HW Rht 4,         !- Zone Equipment Name 1
   1,                                      !- Zone Equipment Cooling Sequence 1
   1,                                      !- Zone Equipment Heating or No-Load Sequence 1
   ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 1
-  ,                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
-  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 2
-  ADU VAV No Rht 4,                       !- Zone Equipment Name 2
-  2,                                      !- Zone Equipment Cooling Sequence 2
-  2,                                      !- Zone Equipment Heating or No-Load Sequence 2
-  ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 2
-  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 2
+  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
 
 Sizing:Zone,
   Thermal Zone 5,                         !- Zone or ZoneList Name
@@ -3027,50 +3039,53 @@ NodeList,
   Thermal Zone 6 Return Node List,        !- Name
   Node 53;                                !- Node Name 1
 
-ZoneHVAC:Baseboard:Convective:Water,
-  HW Baseboard 5,                         !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 25,                                !- Inlet Node Name
-  Node 26,                                !- Outlet Node Name
-  HeatingDesignCapacity,                  !- Heating Design Capacity Method
-  Autosize,                               !- Heating Design Capacity {W}
-  0,                                      !- Heating Design Capacity Per Floor Area {W/m2}
-  0.8,                                    !- Fraction of Autosized Heating Design Capacity
-  158.41,                                 !- U-Factor Times Area Value {W/K}
-  0.000129,                               !- Maximum Water Flow Rate {m3/s}
-  0.001;                                  !- Convergence Tolerance
-
 ZoneHVAC:AirDistributionUnit,
-  ADU VAV No Rht 5,                       !- Name
+  ADU Changeover Bypass HW Rht 5,         !- Name
   Node 52,                                !- Air Distribution Unit Outlet Node Name
-  AirTerminal:SingleDuct:VAV:NoReheat,    !- Air Terminal Object Type
-  VAV No Rht 5;                           !- Air Terminal Name
+  AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat, !- Air Terminal Object Type
+  Changeover Bypass HW Rht 5;             !- Air Terminal Name
 
-AirTerminal:SingleDuct:VAV:NoReheat,
-  VAV No Rht 5,                           !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 52,                                !- Air Outlet Node Name
+AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat,
+  Changeover Bypass HW Rht 5,             !- Name
+  ,                                       !- Availability Schedule Name
+  Changeover Bypass HW Rht 5 Damper Outlet Node, !- Damper Air Outlet Node Name
   Node 54,                                !- Air Inlet Node Name
   0.250493,                               !- Maximum Air Flow Rate {m3/s}
-  Constant,                               !- Zone Minimum Air Flow Input Method
-  0.3,                                    !- Constant Minimum Air Flow Fraction
-  Autosize;                               !- Fixed Minimum Air Flow Rate {m3/s}
+  0,                                      !- Zone Minimum Air Flow Fraction
+  Coil:Heating:Water,                     !- Reheat Coil Object Type
+  Changeover Bypass HW Rht Coil 5,        !- Reheat Coil Name
+  AutoSize,                               !- Maximum Hot Water or Steam Flow Rate {m3/s}
+  0,                                      !- Minimum Hot Water or Steam Flow Rate {m3/s}
+  Node 52,                                !- Air Outlet Node Name
+  0.001,                                  !- Convergence Tolerance
+  1000;                                   !- Maximum Reheat Air Temperature {C}
+
+Coil:Heating:Water,
+  Changeover Bypass HW Rht Coil 5,        !- Name
+  Always On Discrete hvac_library,        !- Availability Schedule Name
+  143.44,                                 !- U-Factor Times Area Value {W/K}
+  0.000143,                               !- Maximum Water Flow Rate {m3/s}
+  Node 65,                                !- Water Inlet Node Name
+  Node 66,                                !- Water Outlet Node Name
+  Changeover Bypass HW Rht 5 Damper Outlet Node, !- Air Inlet Node Name
+  Node 52,                                !- Air Outlet Node Name
+  UFactorTimesAreaAndDesignWaterFlowRate, !- Performance Input Method
+  6454.81,                                !- Rated Capacity {W}
+  82.2,                                   !- Rated Inlet Water Temperature {C}
+  16.6,                                   !- Rated Inlet Air Temperature {C}
+  71.1,                                   !- Rated Outlet Water Temperature {C}
+  32.2,                                   !- Rated Outlet Air Temperature {C}
+  0.5;                                    !- Rated Ratio for Air and Water Convection
 
 ZoneHVAC:EquipmentList,
   Thermal Zone 6 Equipment List,          !- Name
   SequentialLoad,                         !- Load Distribution Scheme
-  ZoneHVAC:Baseboard:Convective:Water,    !- Zone Equipment Object Type 1
-  HW Baseboard 5,                         !- Zone Equipment Name 1
+  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 1
+  ADU Changeover Bypass HW Rht 5,         !- Zone Equipment Name 1
   1,                                      !- Zone Equipment Cooling Sequence 1
   1,                                      !- Zone Equipment Heating or No-Load Sequence 1
   ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 1
-  ,                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
-  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 2
-  ADU VAV No Rht 5,                       !- Zone Equipment Name 2
-  2,                                      !- Zone Equipment Cooling Sequence 2
-  2,                                      !- Zone Equipment Heating or No-Load Sequence 2
-  ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 2
-  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 2
+  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
 
 Sizing:Zone,
   Thermal Zone 6,                         !- Zone or ZoneList Name
@@ -3447,50 +3462,53 @@ NodeList,
   Thermal Zone 7 Return Node List,        !- Name
   Node 56;                                !- Node Name 1
 
-ZoneHVAC:Baseboard:Convective:Water,
-  HW Baseboard 6,                         !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 27,                                !- Inlet Node Name
-  Node 28,                                !- Outlet Node Name
-  HeatingDesignCapacity,                  !- Heating Design Capacity Method
-  Autosize,                               !- Heating Design Capacity {W}
-  0,                                      !- Heating Design Capacity Per Floor Area {W/m2}
-  0.8,                                    !- Fraction of Autosized Heating Design Capacity
-  201.55,                                 !- U-Factor Times Area Value {W/K}
-  0.000148,                               !- Maximum Water Flow Rate {m3/s}
-  0.001;                                  !- Convergence Tolerance
-
 ZoneHVAC:AirDistributionUnit,
-  ADU VAV No Rht 6,                       !- Name
+  ADU Changeover Bypass HW Rht 6,         !- Name
   Node 55,                                !- Air Distribution Unit Outlet Node Name
-  AirTerminal:SingleDuct:VAV:NoReheat,    !- Air Terminal Object Type
-  VAV No Rht 6;                           !- Air Terminal Name
+  AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat, !- Air Terminal Object Type
+  Changeover Bypass HW Rht 6;             !- Air Terminal Name
 
-AirTerminal:SingleDuct:VAV:NoReheat,
-  VAV No Rht 6,                           !- Name
-  Always On Discrete 1,                   !- Availability Schedule Name
-  Node 55,                                !- Air Outlet Node Name
+AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat,
+  Changeover Bypass HW Rht 6,             !- Name
+  ,                                       !- Availability Schedule Name
+  Changeover Bypass HW Rht 6 Damper Outlet Node, !- Damper Air Outlet Node Name
   Node 57,                                !- Air Inlet Node Name
   0.287566,                               !- Maximum Air Flow Rate {m3/s}
-  Constant,                               !- Zone Minimum Air Flow Input Method
-  0.3,                                    !- Constant Minimum Air Flow Fraction
-  Autosize;                               !- Fixed Minimum Air Flow Rate {m3/s}
+  0,                                      !- Zone Minimum Air Flow Fraction
+  Coil:Heating:Water,                     !- Reheat Coil Object Type
+  Changeover Bypass HW Rht Coil 6,        !- Reheat Coil Name
+  AutoSize,                               !- Maximum Hot Water or Steam Flow Rate {m3/s}
+  0,                                      !- Minimum Hot Water or Steam Flow Rate {m3/s}
+  Node 55,                                !- Air Outlet Node Name
+  0.001,                                  !- Convergence Tolerance
+  1000;                                   !- Maximum Reheat Air Temperature {C}
+
+Coil:Heating:Water,
+  Changeover Bypass HW Rht Coil 6,        !- Name
+  Always On Discrete hvac_library,        !- Availability Schedule Name
+  164.68,                                 !- U-Factor Times Area Value {W/K}
+  0.000164,                               !- Maximum Water Flow Rate {m3/s}
+  Node 63,                                !- Water Inlet Node Name
+  Node 64,                                !- Water Outlet Node Name
+  Changeover Bypass HW Rht 6 Damper Outlet Node, !- Air Inlet Node Name
+  Node 55,                                !- Air Outlet Node Name
+  UFactorTimesAreaAndDesignWaterFlowRate, !- Performance Input Method
+  7410.4,                                 !- Rated Capacity {W}
+  82.2,                                   !- Rated Inlet Water Temperature {C}
+  16.6,                                   !- Rated Inlet Air Temperature {C}
+  71.1,                                   !- Rated Outlet Water Temperature {C}
+  32.2,                                   !- Rated Outlet Air Temperature {C}
+  0.5;                                    !- Rated Ratio for Air and Water Convection
 
 ZoneHVAC:EquipmentList,
   Thermal Zone 7 Equipment List,          !- Name
   SequentialLoad,                         !- Load Distribution Scheme
-  ZoneHVAC:Baseboard:Convective:Water,    !- Zone Equipment Object Type 1
-  HW Baseboard 6,                         !- Zone Equipment Name 1
+  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 1
+  ADU Changeover Bypass HW Rht 6,         !- Zone Equipment Name 1
   1,                                      !- Zone Equipment Cooling Sequence 1
   1,                                      !- Zone Equipment Heating or No-Load Sequence 1
   ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 1
-  ,                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
-  ZoneHVAC:AirDistributionUnit,           !- Zone Equipment Object Type 2
-  ADU VAV No Rht 6,                       !- Zone Equipment Name 2
-  2,                                      !- Zone Equipment Cooling Sequence 2
-  2,                                      !- Zone Equipment Heating or No-Load Sequence 2
-  ,                                       !- Zone Equipment Sequential Cooling Fraction Schedule Name 2
-  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 2
+  ;                                       !- Zone Equipment Sequential Heating Fraction Schedule Name 1
 
 Sizing:Zone,
   Thermal Zone 7,                         !- Zone or ZoneList Name
@@ -3536,11 +3554,11 @@ HeatBalanceAlgorithm,
 
 RunPeriod,
   Run Period 1,                           !- Name
-  11,                                     !- Begin Month
+  1,                                      !- Begin Month
   1,                                      !- Begin Day of Month
-  ,                                       !- Begin Year
-  11,                                     !- End Month
-  30,                                     !- End Day of Month
+  ,                                   !- Begin Year
+  2,                                     !- End Month
+  28,                                     !- End Day of Month
   ,                                   !- End Year
   Sunday,                                 !- Day of Week for Start Day
   No,                                     !- Use Weather File Holidays and Special Days
@@ -3572,7 +3590,8 @@ Sizing:Parameters,
   1.15;                                   !- Cooling Sizing Factor
 
 ZoneAirContaminantBalance,
-  No;                                     !- Carbon Dioxide Concentration
+  Yes,                                     !- Carbon Dioxide Concentration
+  Always On Continuous;
 
 ZoneAirHeatBalanceAlgorithm,
   ThirdOrderBackwardDifference;           !- Algorithm
@@ -4858,7 +4877,7 @@ Schedule:Constant,
 Schedule:Constant,
   Always On Continuous,                   !- Name
   ,                                       !- Schedule Type Limits Name
-  1;                                      !- Hourly Value
+  410;                                      !- Hourly Value
 
 OutdoorAir:Node,
   Model Outdoor Air Node;                 !- Name
@@ -4984,8 +5003,8 @@ Controller:OutdoorAir,
   Node 29,                                !- Return Air Node Name
   Node 37,                                !- Mixed Air Node Name
   Node 34,                                !- Actuator Node Name
-  0.3658333,                              !- Minimum Outdoor Air Flow Rate {m3/s}
-  1.809444,                               !- Maximum Outdoor Air Flow Rate {m3/s}
+  Autosize,                               !- Minimum Outdoor Air Flow Rate {m3/s}
+  Autosize,                               !- Maximum Outdoor Air Flow Rate {m3/s}
   NoEconomizer,                           !- Economizer Control Type
   ModulateFlow,                           !- Economizer Control Action Type
   28,                                     !- Economizer Maximum Limit Dry-Bulb Temperature {C}
@@ -5035,7 +5054,7 @@ OutdoorAir:Mixer,
 HeatExchanger:AirToAir:SensibleAndLatent,
   Air-to-Air HX,                          !- Name
   Always On Discrete 1,                   !- Availability Schedule Name
-  0.36576,                                !- Nominal Supply Air Flow Rate {m3/s}
+  Autosize,                               !- Nominal Supply Air Flow Rate {m3/s}
   0.76,                                   !- Sensible Effectiveness at 100% Heating Air Flow {dimensionless}
   0.68,                                   !- Latent Effectiveness at 100% Heating Air Flow {dimensionless}
   0.81,                                   !- Sensible Effectiveness at 75% Heating Air Flow {dimensionless}
@@ -5076,8 +5095,8 @@ SetpointManager:MixedAir,
 Coil:Heating:Water,
   HW Htg Coil,                            !- Name
   Always On Discrete 1,                   !- Availability Schedule Name
-  Autosize,                               !- U-Factor Times Area Value {W/K}
-  0.0003,                                 !- Maximum Water Flow Rate {m3/s}
+  187.25,                                 !- U-Factor Times Area Value {W/K}
+  0.000266,                               !- Maximum Water Flow Rate {m3/s}
   Node 39,                                !- Water Inlet Node Name
   Node 58,                                !- Water Outlet Node Name
   Node 37,                                !- Air Inlet Node Name
@@ -5103,13 +5122,13 @@ Fan:SystemModel,
   Always On Discrete hvac_library,        !- Availability Schedule Name
   Node 38,                                !- Air Inlet Node Name
   Node 30,                                !- Air Outlet Node Name
-  Autosize,                               !- Design Maximum Air Flow Rate {m3/s}
+  1.81,                                   !- Design Maximum Air Flow Rate {m3/s}
   Continuous,                             !- Speed Control Method
   0,                                      !- Electric Power Minimum Flow Rate Fraction
   1017.592,                               !- Design Pressure Rise {Pa}
   0.93,                                   !- Motor Efficiency
   1,                                      !- Motor In Air Stream Fraction
-  Autosize,                               !- Design Electric Power Consumption {W}
+  3045.81,                                !- Design Electric Power Consumption {W}
   TotalEfficiencyAndPressure,             !- Design Power Sizing Method
   840,                                    !- Electric Power Per Unit Flow Rate {W/(m3/s)}
   1.66667,                                !- Electric Power Per Unit Flow Rate Per Unit Pressure {W/((m3/s)-Pa)}
@@ -5362,66 +5381,66 @@ Pipe:Adiabatic,
 Branch,
   Plant Loop 1 Demand Branch 1,           !- Name
   ,                                       !- Pressure Drop Curve Name
-  ZoneHVAC:Baseboard:Convective:Water,    !- Component Object Type 1
-  HW Baseboard 1,                         !- Component Name 1
-  Node 17,                                !- Component Inlet Node Name 1
-  Node 18;                                !- Component Outlet Node Name 1
-
-Branch,
-  Plant Loop 1 Demand Branch 2,           !- Name
-  ,                                       !- Pressure Drop Curve Name
-  ZoneHVAC:Baseboard:Convective:Water,    !- Component Object Type 1
-  HW Baseboard 2,                         !- Component Name 1
-  Node 19,                                !- Component Inlet Node Name 1
-  Node 20;                                !- Component Outlet Node Name 1
-
-Branch,
-  Plant Loop 1 Demand Branch 3,           !- Name
-  ,                                       !- Pressure Drop Curve Name
-  ZoneHVAC:Baseboard:Convective:Water,    !- Component Object Type 1
-  HW Baseboard 3,                         !- Component Name 1
-  Node 21,                                !- Component Inlet Node Name 1
-  Node 22;                                !- Component Outlet Node Name 1
-
-Branch,
-  Plant Loop 1 Demand Branch 4,           !- Name
-  ,                                       !- Pressure Drop Curve Name
-  ZoneHVAC:Baseboard:Convective:Water,    !- Component Object Type 1
-  HW Baseboard 4,                         !- Component Name 1
-  Node 23,                                !- Component Inlet Node Name 1
-  Node 24;                                !- Component Outlet Node Name 1
-
-Branch,
-  Plant Loop 1 Demand Branch 5,           !- Name
-  ,                                       !- Pressure Drop Curve Name
-  ZoneHVAC:Baseboard:Convective:Water,    !- Component Object Type 1
-  HW Baseboard 5,                         !- Component Name 1
-  Node 25,                                !- Component Inlet Node Name 1
-  Node 26;                                !- Component Outlet Node Name 1
-
-Branch,
-  Plant Loop 1 Demand Branch 6,           !- Name
-  ,                                       !- Pressure Drop Curve Name
-  ZoneHVAC:Baseboard:Convective:Water,    !- Component Object Type 1
-  HW Baseboard 6,                         !- Component Name 1
-  Node 27,                                !- Component Inlet Node Name 1
-  Node 28;                                !- Component Outlet Node Name 1
-
-Branch,
-  Plant Loop 1 Demand Branch 7,           !- Name
-  ,                                       !- Pressure Drop Curve Name
   Coil:Heating:Water,                     !- Component Object Type 1
   HW Htg Coil,                            !- Component Name 1
   Node 39,                                !- Component Inlet Node Name 1
   Node 58;                                !- Component Outlet Node Name 1
 
 Branch,
-  Plant Loop 1 Demand Branch 8,           !- Name
+  Plant Loop 1 Demand Branch 2,           !- Name
   ,                                       !- Pressure Drop Curve Name
   Coil:Heating:Water,                     !- Component Object Type 1
   Changeover Bypass HW Rht Coil,          !- Component Name 1
   Node 59,                                !- Component Inlet Node Name 1
   Node 60;                                !- Component Outlet Node Name 1
+
+Branch,
+  Plant Loop 1 Demand Branch 3,           !- Name
+  ,                                       !- Pressure Drop Curve Name
+  Coil:Heating:Water,                     !- Component Object Type 1
+  Changeover Bypass HW Rht Coil 6,        !- Component Name 1
+  Node 63,                                !- Component Inlet Node Name 1
+  Node 64;                                !- Component Outlet Node Name 1
+
+Branch,
+  Plant Loop 1 Demand Branch 4,           !- Name
+  ,                                       !- Pressure Drop Curve Name
+  Coil:Heating:Water,                     !- Component Object Type 1
+  Changeover Bypass HW Rht Coil 5,        !- Component Name 1
+  Node 65,                                !- Component Inlet Node Name 1
+  Node 66;                                !- Component Outlet Node Name 1
+
+Branch,
+  Plant Loop 1 Demand Branch 5,           !- Name
+  ,                                       !- Pressure Drop Curve Name
+  Coil:Heating:Water,                     !- Component Object Type 1
+  Changeover Bypass HW Rht Coil 4,        !- Component Name 1
+  Node 67,                                !- Component Inlet Node Name 1
+  Node 68;                                !- Component Outlet Node Name 1
+
+Branch,
+  Plant Loop 1 Demand Branch 6,           !- Name
+  ,                                       !- Pressure Drop Curve Name
+  Coil:Heating:Water,                     !- Component Object Type 1
+  Changeover Bypass HW Rht Coil 3,        !- Component Name 1
+  Node 69,                                !- Component Inlet Node Name 1
+  Node 70;                                !- Component Outlet Node Name 1
+
+Branch,
+  Plant Loop 1 Demand Branch 7,           !- Name
+  ,                                       !- Pressure Drop Curve Name
+  Coil:Heating:Water,                     !- Component Object Type 1
+  Changeover Bypass HW Rht Coil 2,        !- Component Name 1
+  Node 71,                                !- Component Inlet Node Name 1
+  Node 72;                                !- Component Outlet Node Name 1
+
+Branch,
+  Plant Loop 1 Demand Branch 8,           !- Name
+  ,                                       !- Pressure Drop Curve Name
+  Coil:Heating:Water,                     !- Component Object Type 1
+  Changeover Bypass HW Rht Coil 1,        !- Component Name 1
+  Node 73,                                !- Component Inlet Node Name 1
+  Node 74;                                !- Component Outlet Node Name 1
 
 Branch,
   Plant Loop 1 Demand Bypass Branch,      !- Name
@@ -6550,17 +6569,23 @@ Output:Variable,*,Zone Air Terminal Outdoor Air Volume Flow Rate,hourly; !- HVAC
 Output:Variable,*,Zone Thermal Comfort Fanger Model PMV,hourly; !- Zone Average []
 Output:Variable,*,Zone Thermal Comfort Fanger Model PPD,hourly; !- Zone Average [%]
 
+Output:Variable,*,Pump Electricity Rate,hourly; !- HVAC Average [W]
 Output:Variable,*,Facility Total HVAC Electricity Demand Rate,hourly; !- HVAC Average [W]
 
 Output:Table:Monthly,
-  Building Monthly Fan Energy Demand Report,                ! Name
+  Building Monthly Baseboard energy usage,                ! Name
   3,                                                        ! Digits After Decimal
-  Fan Electricity Rate,                                     ! Variable or Meter 1 Name
+  Baseboard Total Heating Energy,                                     ! Variable or Meter 1 Name
+  SumOrAverage;                                             ! Aggregation Type for Variable or Meter 1
+  
+
+Output:Table:Monthly,
+  Pump usage Monthly,                                       ! Name
+  3,                                                        ! Digits After Decimal
+  Pump Electricity Rate,                           ! Variable or Meter 1 Name
   SumOrAverage,                                             ! Aggregation Type for Variable or Meter 1
-  Fan Air Mass Flow Rate,                                   ! Variable or Meter 2 Name
-  SumOrAverage,                                             ! Aggregation Type for Variable or Meter 2
-  Fan Electricity Energy,                                   ! Variable or Meter 3 Name
-  SumOrAverage;                                             ! Aggregation Type for Variable or Meter 3
+  Pump Mass Flow Rate,
+  SumOrAverage;
 
 Output:Table:Monthly,
   Average PPD report,                ! Name

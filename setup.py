@@ -1,0 +1,35 @@
+from setuptools import setup, find_packages
+
+setup(
+    name='eplus-drl',
+    version='0.1.0',
+    packages=find_packages(),
+    install_requires=[
+        'contourpy>=1.2.1',
+        'cycler==0.12.1',
+        'fonttools==4.51.0',
+        'kiwisolver==1.4.5',
+        'matplotlib>=3.8.4',
+        'numpy>=1.22',
+        'packaging==24.0',
+        'pandas>=2.2.1',
+        'pillow>=10.3.0',
+        'pyparsing==3.1.2',
+        'python-dateutil==2.9.0.post0',
+        'pytz==2024.1',
+        'six==1.16.0',
+        'tzdata==2024.1',
+        'tensorflow==2.16.1',  
+        'absl-py>=1.4.0',  
+    ],
+    author='Sebastian Cubides',
+    author_email='sebscubs@gmail.com',
+    description='Deep Reinforcement Learning for EnergyPlus',
+    url='https://github.com/SebsCubs/energy-plus-DRL',  
+    classifiers=[
+        'Programming Language :: Python :: 3',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: Linux',
+    ],
+    python_requires='>=3.7',
+)

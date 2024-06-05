@@ -1,6 +1,7 @@
 import pandas as pd
 
-from emspy import EmsPy
+from eplus_drl import EmsPy
+import os
 
 
 class BcaEnv(EmsPy):
@@ -324,7 +325,9 @@ class BcaEnv(EmsPy):
                              ' collected during simulation.')
         else:
             if to_csv_file:
-                # write DFs to file
+                folder_path = os.path.dirname(to_csv_file)
+                if folder_path:  # only create directory if folder_path is not empty
+                    os.makedirs(folder_path, exist_ok=True)
                 all_df.to_csv(to_csv_file, index=False)
             return_df['all'] = all_df
 

@@ -1,3 +1,12 @@
+ep_path = r"C:\EnergyPlusV22-1-0" # path to E+ on system (Windows example)
+#ep_path = r"/usr/local/EnergyPlus-22-1-0" #(Linux example)
+idf_file_name = r"BEMFiles/sdu_damper_all_rooms.idf" 
+ep_weather_path = r"BEMFiles/DNK_Jan_Feb.epw"
+cvs_output_path = r"Dataframes/dataframes_output_test.csv"
+number_of_subprocesses = 1
+number_of_episodes = 10
+eplus_verbose = 1 # 0 only linux
+
 """
 Author: Sebastian Cubides
 """
@@ -16,22 +25,20 @@ import absl.logging
 absl.logging.set_verbosity(absl.logging.ERROR)
 import sys
 import numpy as np
-from emspy import EmsPy, BcaEnv
+from eplus_drl import EmsPy, BcaEnv
 import datetime
 import time
-from keras.models import Model
-from keras.layers import Input, Dense, Flatten
-from keras.optimizers import Adam
+from keras import Model
+from keras.api.layers import Input, Dense, Flatten
+from keras.api.optimizers import Adam
+from keras.api.models import load_model
 import matplotlib
 matplotlib.use('Agg') # For saving in a headless program. Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 start_time = time.time()
 # -- FILE PATHS --
-ep_path = '/usr/local/EnergyPlus-22-1-0'
 script_directory = os.path.dirname(os.path.abspath(__file__))
-idf_file_name = r'xxxxxxxxx' 
-ep_weather_path = r'xxxxxxxx'
-cvs_output_path = r'xxxxxxxxx'
+
 ####################### RL model and class  #################
 def A2CModels(input_shape, action_space, lr):
     X_input = Input(shape=input_shape)
@@ -40,8 +47,8 @@ def A2CModels(input_shape, action_space, lr):
     action = Dense(action_space, activation="softmax", kernel_initializer='he_uniform')(X_hid2)
     value = Dense(1, kernel_initializer='he_uniform')(X_hid2)
     Actor = Model(inputs = X_input, outputs = action)
-    Actor.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=lr))
     Critic = Model(inputs = X_input, outputs = value)
+    Actor.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=lr))
     Critic.compile(loss='mse', optimizer=Adam(learning_rate=lr))
     return Actor, Critic
 
@@ -56,7 +63,7 @@ class A2C_agent:
         self.scores, self.episodes, self.average = [], [], []
         self.score = 0
         self.episode = 0
-        self.EPISODES = 1000
+        self.EPISODES = number_of_episodes
         self.max_average = -99999999999
         self.Save_Path = 'Models'
         if not os.path.exists(self.Save_Path): os.makedirs(self.Save_Path)
@@ -65,11 +72,25 @@ class A2C_agent:
         self.state = None
         self.time_of_day = None
 
+    
     def copy(self):
         new = A2C_agent()
+    
+        # Create new models with the same architecture as Actor and Critic
+        new.Actor = tf.keras.models.clone_model(self.Actor)
+        new.Critic = tf.keras.models.clone_model(self.Critic)
+    
+        # Set weights of the new models to the weights of the old models
         new.Actor.set_weights(self.Actor.get_weights())
         new.Critic.set_weights(self.Critic.get_weights())
+
+        # Compile the new models
+        new.Actor.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=self.lr))
+        new.Critic.compile(loss='mse', optimizer=Adam(learning_rate=self.lr))
+
+        # Copy episode
         new.episode = self.episode
+    
         return new
 
     def get_EPISODES(self):
@@ -113,6 +134,9 @@ class A2C_agent:
         return discounted_r
 
     def replay(self):
+        if self.Actor.optimizer is None or self.Critic.optimizer is None:
+            raise Exception("Models are not compiled")
+    
         states = np.vstack(self.states)
         actions = np.vstack(self.actions)
         self.score = np.sum(self.rewards)
@@ -128,7 +152,7 @@ class A2C_agent:
     
     def evaluate_model(self):
         self.average.append(sum(self.scores[-50:]) / len(self.scores[-50:]))
-        if __name__ == "__main__":
+        if __name__ == "__main__" or __name__ == "__mp_main__": #mp_main is for windows
             if str(self.episode)[-1:] == "0":# much faster than episode % 100
                 try:      
                     fig, ax = plt.subplots() # fig : figure object, ax : Axes object              
@@ -161,6 +185,7 @@ class Energyplus_manager:
     def __init__(self, episode, a2c_object:A2C_agent,lock):
         self.global_a2c_object = a2c_object
         self.local_a2c_object = self.global_a2c_object.copy()
+
         self.episode = episode
         self.a2c_state = None
         self.step_reward = 0  
@@ -219,16 +244,25 @@ class Energyplus_manager:
             update_observation_frequency=1,  # linked to observation update
             update_actuation_frequency=1  # linked to actuation update
         )
-        devnull = open('/dev/null', 'w')#To make e+ shut up!
-        orig_stdout_fd = os.dup(1)
-        orig_stderr_fd = os.dup(2)
-        os.dup2(devnull.fileno(), 1)
-        os.dup2(devnull.fileno(), 2)
-        self.run_simulation()
-        os.dup2(orig_stdout_fd, 1) #Restoring stdout
-        os.dup2(orig_stderr_fd, 2)
-        os.close(orig_stdout_fd)
-        os.close(orig_stderr_fd)
+        
+        if eplus_verbose == 2:
+            self.run_simulation()
+        elif eplus_verbose == 1:
+            self.run_simulation()    
+        elif eplus_verbose == 0 :
+            devnull = open(os.devnull, 'w')
+            orig_stdout_fd = os.dup(1)
+            orig_stderr_fd = os.dup(2)
+            os.dup2(devnull.fileno(), 1)
+            os.dup2(devnull.fileno(), 2)             
+            self.run_simulation()
+            os.dup2(orig_stdout_fd, 1) #Restoring stdout
+            os.dup2(orig_stderr_fd, 2)
+            os.close(orig_stdout_fd)
+            os.close(orig_stderr_fd)
+        else:
+            raise ValueError("eplus_verbose must be 0, 1 or 2")
+            
         self.run_neural_net()
         with lock:
             self.local_a2c_object.update_global(self.global_a2c_object)
@@ -325,9 +359,9 @@ if __name__ == "__main__":
         with CustomManager() as manager:
             shared_a2c_object = manager.A2C_agent()
             EPISODES = shared_a2c_object.get_EPISODES()
-            with Pool(processes=10, maxtasksperchild = 3) as pool:
+            with Pool(processes=number_of_subprocesses, maxtasksperchild = 3) as pool:
                 for index in range(EPISODES):
-                    pool.apply_async(run_one_manger, args=(index, shared_a2c_object, lock,))
+                    pool.apply_async(run_one_manger, args=(index, shared_a2c_object, lock))
                 pool.close()
                 pool.join()
             end_time = time.time()
