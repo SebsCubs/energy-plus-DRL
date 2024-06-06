@@ -4,3 +4,15 @@
 
 *Any feedback or improvements to the repo are welcome.* 
 
+## Getting started
+1. Requirements
+2. Installation
+3. Brainstorm ideas for controlling building systems, establish key performance indicators for your building simulation
+4. Run your energyplus model once, fetch available variables and actuators
+5. Decide which variables to observe from the energyplus simulation, decide how to normalize/embed them
+6. Decide which actuators to use and a reward function if applicable
+7. Decide the agent's architecture and network hyperparameters
+8. Train the agent's policy
+9. Test the agent
+11. Visualize and compare the new controller's impact on the building simulation
+12. Benchmark different control strategies
