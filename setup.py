@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='eplus-drl',
+    name='eplus_drl',
     version='0.1.0',
     packages=find_packages(),
     install_requires=[
