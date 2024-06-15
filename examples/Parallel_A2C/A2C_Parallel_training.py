@@ -137,6 +137,7 @@ class A2C_agent:
     def replay(self):
         states = torch.FloatTensor(np.vstack(self.states))
         actions = torch.FloatTensor(np.vstack(self.actions))
+        self.score = np.sum(self.rewards)
         discounted_r = torch.FloatTensor(self.discount_rewards(self.rewards))
         action_probs, values = self.model(states)
         values = values.squeeze()
@@ -167,7 +168,7 @@ class A2C_agent:
                     ax.set_ylabel('Score', fontsize=18)
                     ax.set_xlabel('Steps', fontsize=18)
                     ax.set_title("Episode scores")
-                    fig.savefig(os.path.join(self.Save_Path, self.path)+".png")
+                    fig.savefig(self.Model_name[:-4] + ".png")
                     plt.close('all')
                 except OSError as e:
                     print(e)
