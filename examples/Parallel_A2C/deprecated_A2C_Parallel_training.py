@@ -42,7 +42,6 @@ def load_config(config_file='config.ini'):
     
     return config_dict
 
-####################### RL model and class  #################
 class ActorCriticModel(nn.Module):
     def __init__(self, input_shape, action_space):
         super(ActorCriticModel, self).__init__()
@@ -101,7 +100,6 @@ class A2C_agent:
             target_model = self.model
             target_optimizer = self.optimizer
 
-            # Manually copy gradients from source_model to target_model
             with torch.no_grad():
                 for source_param, target_param in zip(source_model.parameters(), target_model.parameters()):
                     if source_param.grad is not None:
@@ -109,10 +107,7 @@ class A2C_agent:
                             target_param.grad = torch.zeros_like(target_param)
                         target_param.grad.copy_(source_param.grad)
 
-            # Update the target model using its optimizer
             target_optimizer.step()
-
-            #print("Updated target model with gradients from source model.")
             
         except Exception as e:
             error_message = f"An error occurred while updating the global network: {e}\n{traceback.format_exc()}"
@@ -152,36 +147,19 @@ class A2C_agent:
 
     def replay(self):
         try:
-            # Convert lists to tensors
             states = torch.FloatTensor(np.vstack(self.states))
             actions = torch.FloatTensor(np.vstack(self.actions))
             self.score = np.sum(self.rewards)
             discounted_r = torch.FloatTensor(self.discount_rewards(self.rewards))
-            
-            # Forward pass to get action probabilities and value estimates
             action_probs, values = self.model(states)
             values = values.squeeze()
-            
-            # Ensure action_probs are the probabilities of the taken actions
             action_probs = torch.gather(action_probs, 1, actions.long())
-            
-            # Calculate the advantages
             advantages = discounted_r - values
-            
-            
-            #actor_loss = -(torch.log(action_probs) * advantages).sum(dim=1)
             actor_loss = -(torch.log(action_probs) * actions).sum(dim=1) * advantages
-            # Critic loss: MSE of the advantages
             critic_loss = advantages.pow(2)
-            
-            # Total loss: mean of actor and critic losses
             loss = actor_loss.mean() + critic_loss.mean()
-            
-            # Perform backward pass and update the model
             self.optimizer.zero_grad()
             loss.backward()
-
-            # Log the gradients
             if self.verbose == 0:
                 pass
             elif self.verbose == 1:
@@ -191,14 +169,8 @@ class A2C_agent:
                     if param.grad is not None:
                         print(f"Gradients for {name}: {param.grad}")
             else:
-                print("Warning: Verbose should be 0,1 or 2 only")
-
-            # Instead of updating the model, you can now copy the gradients to another model
-            
+                print("Warning: Verbose should be 0, 1 or 2 only")
             self.states, self.actions, self.rewards = [], [], []
-            
-            #print("Replayed neural network, grads: ", self.score)
-        
         except Exception as e:
             error_message = f"An error occurred during the replay: {e}\n{traceback.format_exc()}"
             print(error_message)
@@ -215,7 +187,6 @@ class A2C_agent:
     
     def evaluate_model(self):
         self.average.append(sum(self.scores[-50:]) / len(self.scores[-50:]))
-        
         if __name__ == "__main__":
             if str(self.episode)[-1:] == "0":
                 try:      
@@ -242,8 +213,6 @@ class A2C_agent:
 
         return self.average[-1]
 
-####################### Process function: EnergyPlus manager #################
-
 class Energyplus_manager:
     def __init__(self, episode, a2c_object, config, lock):
         self.global_a2c_object = a2c_object
@@ -257,36 +226,34 @@ class Energyplus_manager:
         self.episode_reward = 0
         self.previous_state = None
         self.previous_action = None
-        self.zn0 = 'Thermal Zone 1' #name of the zone to control 
-        self.tc_intvars = {}  # empty, don't need any
+        self.zn0 = 'Thermal Zone 1'
+        self.tc_intvars = {}
         self.tc_vars = {
-            'zn0_temp': ('Zone Air Temperature', self.zn0),  # deg C
-            'air_loop_fan_mass_flow_var' : ('Fan Air Mass Flow Rate','FANSYSTEMMODEL VAV'),  # kg/s
-            'air_loop_fan_electric_power' : ('Fan Electricity Rate','FANSYSTEMMODEL VAV'),  # W
-            'deck_temp_setpoint' : ('System Node Setpoint Temperature','Node 30'),  # deg C
-            'deck_temp' : ('System Node Temperature','Node 30'),  # deg C
+            'zn0_temp': ('Zone Air Temperature', self.zn0),
+            'air_loop_fan_mass_flow_var' : ('Fan Air Mass Flow Rate','FANSYSTEMMODEL VAV'),
+            'air_loop_fan_electric_power' : ('Fan Electricity Rate','FANSYSTEMMODEL VAV'),
+            'deck_temp_setpoint' : ('System Node Setpoint Temperature','Node 30'),
+            'deck_temp' : ('System Node Temperature','Node 30'),
             'ppd' : ('Zone Thermal Comfort Fanger Model PPD', 'THERMAL ZONE 1 189.1-2009 - OFFICE - WHOLEBUILDING - MD OFFICE - CZ4-8 PEOPLE'),
         }
-        self.tc_meters = {} # empty, don't need any
+        self.tc_meters = {}
         self.tc_weather = {
-            'oa_rh': ('outdoor_relative_humidity'),  # %RH
-            'oa_db': ('outdoor_dry_bulb'),  # deg C
-            'oa_pa': ('outdoor_barometric_pressure'),  # Pa
-            'sun_up': ('sun_is_up'),  # T/F
-            'rain': ('is_raining'),  # T/F
-            'snow': ('is_snowing'),  # T/F
-            'wind_dir': ('wind_direction'),  # deg
-            'wind_speed': ('wind_speed')  # m/s
+            'oa_rh': ('outdoor_relative_humidity'),
+            'oa_db': ('outdoor_dry_bulb'),
+            'oa_pa': ('outdoor_barometric_pressure'),
+            'sun_up': ('sun_is_up'),
+            'rain': ('is_raining'),
+            'snow': ('is_snowing'),
+            'wind_dir': ('wind_direction'),
+            'wind_speed': ('wind_speed')
         }
-        # ACTION SPACE
         self.tc_actuators = {
-            'fan_mass_flow_act': ('Fan', 'Fan Air Mass Flow Rate', 'FANSYSTEMMODEL VAV'),  # kg/s
+            'fan_mass_flow_act': ('Fan', 'Fan Air Mass Flow Rate', 'FANSYSTEMMODEL VAV'),
         }
         
         self.calling_point_for_callback_fxn = EmsPy.available_calling_points[7]  
-        self.sim_timesteps = 6  # every 60 / sim_timestep minutes (e.g 10 minutes per timestep)
+        self.sim_timesteps = 6
         self.working_dir = BcaEnv.get_temp_run_dir()
-        #--- Copy Energyplus into a temp folder ---#
         self.directory_name = "Energyplus_temp"
         self.eplus_copy_path = os.path.join(self.working_dir, self.directory_name)
         self.delete_directory(self.directory_name)
@@ -303,15 +270,14 @@ class Energyplus_manager:
         )
         self.sim.set_calling_point_and_callback_function(
             calling_point=self.calling_point_for_callback_fxn,
-            observation_function=self.observation_function,  # optional function
-            actuation_function=self.actuation_function,  # optional function
-            update_state=True,  # use this callback to update the EMS state
-            update_observation_frequency=1,  # linked to observation update
-            update_actuation_frequency=1  # linked to actuation update
+            observation_function=self.observation_function,
+            actuation_function=self.actuation_function,
+            update_state=True,
+            update_observation_frequency=1,
+            update_actuation_frequency=1
         )
 
     def load_local_model(self, config):
-        
         local_model = A2C_agent(config)
         if os.path.exists(local_model.Model_name):
             local_model.model.load_state_dict(torch.load(local_model.Model_name))
@@ -329,7 +295,7 @@ class Energyplus_manager:
             os.dup2(devnull.fileno(), 1)
             os.dup2(devnull.fileno(), 2)             
             self.run_simulation()
-            os.dup2(orig_stdout_fd, 1) #Restoring stdout
+            os.dup2(orig_stdout_fd, 1)
             os.dup2(orig_stderr_fd, 2)
             os.close(orig_stdout_fd)
             os.close(orig_stderr_fd)
@@ -342,19 +308,19 @@ class Energyplus_manager:
         self.delete_directory()
 
     def run_neural_net(self):
-        self.local_a2c_object.replay() # train the network
+        self.local_a2c_object.replay()
 
     def observation_function(self):
         self.time = self.sim.get_ems_data(['t_datetimes'])
         if self.time < datetime.datetime.now():
             var_data = self.sim.get_ems_data(list(self.sim.tc_var.keys()))
             weather_data = self.sim.get_ems_data(list(self.sim.tc_weather.keys()), return_dict=True)
-            self.zn0_temp = var_data[0]  
-            self.fan_mass_flow = var_data[1]  # kg/s
-            self.fan_electric_power = var_data[2]  # W
-            self.deck_temp_setpoint = var_data[3]  # deg C
-            self.deck_temp = var_data[4]  # deg C
-            self.ppd = var_data[5]  # percent
+            self.zn0_temp = var_data[0]
+            self.fan_mass_flow = var_data[1]
+            self.fan_electric_power = var_data[2]
+            self.deck_temp_setpoint = var_data[3]
+            self.deck_temp = var_data[4]
+            self.ppd = var_data[5]
             self.a2c_state = self.get_state(var_data, weather_data)
             self.step_reward = self.reward_function()
             if(self.previous_state is None):
@@ -407,8 +373,11 @@ class Energyplus_manager:
         if out_path.exists() and out_path.is_dir():
             shutil.rmtree(out_path)
 
-
 def run_eplus_train_thread(episode, config, lock, shared_a2c_object):
+    # Set a different random seed for each process
+    seed = os.getpid()
+    np.random.seed(seed)
+    torch.manual_seed(seed)
     eplus_object = Energyplus_manager(episode, shared_a2c_object, config, lock)
     eplus_object.run_episode()
     return eplus_object.episode_reward
