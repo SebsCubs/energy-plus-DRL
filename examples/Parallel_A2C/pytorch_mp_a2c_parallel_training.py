@@ -1,17 +1,14 @@
 import configparser
-from multiprocessing import Pool, Manager
-from multiprocessing.managers import BaseManager
-from pathlib import Path
-import shutil
-import traceback
-import logging
-import os
-import sys
 import torch
+import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 from eplus_drl import EmsPy, BcaEnv
+from pathlib import Path
+import shutil
+import os
+import sys
 import datetime
 import time
 import matplotlib
@@ -84,41 +81,18 @@ class A2C_agent:
         self.Model_name = config['model_path']
         self.state = None
         self.time_of_day = None
-        self.verbose = config['eplus_verbose']
 
     def get_EPISODES(self):
         return self.EPISODES
     
     def update_global(self, global_a2c_agent):
-        global_a2c_agent.update_global_net(local_model=self.model)
+        global_a2c_agent.update_global_net(self.model)
         global_a2c_agent.append_score(self.score)
         global_a2c_agent.evaluate_model()
-        global_a2c_agent.save()
 
-    def update_global_net(self, local_model):
-        try:
-            source_model = local_model
-            target_model = self.model
-            target_optimizer = self.optimizer
-
-            # Manually copy gradients from source_model to target_model
-            with torch.no_grad():
-                for source_param, target_param in zip(source_model.parameters(), target_model.parameters()):
-                    if source_param.grad is not None:
-                        if target_param.grad is None:
-                            target_param.grad = torch.zeros_like(target_param)
-                        target_param.grad.copy_(source_param.grad)
-
-            # Update the target model using its optimizer
-            target_optimizer.step()
-
-            #print("Updated target model with gradients from source model.")
-            
-        except Exception as e:
-            error_message = f"An error occurred while updating the global network: {e}\n{traceback.format_exc()}"
-            print(error_message)
-            logging.error(error_message)
-
+    def update_global_net(self, model):
+        print("Updating global...")
+        self.model.load_state_dict(model.state_dict())
     
     def append_score(self, score):
         self.episode += 1
@@ -151,69 +125,32 @@ class A2C_agent:
         return discounted_r
 
     def replay(self):
-        try:
-            # Convert lists to tensors
-            states = torch.FloatTensor(np.vstack(self.states))
-            actions = torch.FloatTensor(np.vstack(self.actions))
-            self.score = np.sum(self.rewards)
-            discounted_r = torch.FloatTensor(self.discount_rewards(self.rewards))
-            
-            # Forward pass to get action probabilities and value estimates
-            action_probs, values = self.model(states)
-            values = values.squeeze()
-            
-            # Ensure action_probs are the probabilities of the taken actions
-            action_probs = torch.gather(action_probs, 1, actions.long())
-            
-            # Calculate the advantages
-            advantages = discounted_r - values
-            
-            
-            #actor_loss = -(torch.log(action_probs) * advantages).sum(dim=1)
-            actor_loss = -(torch.log(action_probs) * actions).sum(dim=1) * advantages
-            # Critic loss: MSE of the advantages
-            critic_loss = advantages.pow(2)
-            
-            # Total loss: mean of actor and critic losses
-            loss = actor_loss.mean() + critic_loss.mean()
-            
-            # Perform backward pass and update the model
-            self.optimizer.zero_grad()
-            loss.backward()
+        states = torch.FloatTensor(np.vstack(self.states))
+        actions = torch.FloatTensor(np.vstack(self.actions))
+        self.score = np.sum(self.rewards)
+        discounted_r = torch.FloatTensor(self.discount_rewards(self.rewards))
+        action_probs, values = self.model(states)
+        values = values.squeeze()
+        advantages = discounted_r - values
 
-            # Log the gradients
-            if self.verbose == 0:
-                pass
-            elif self.verbose == 1:
-                pass
-            elif self.verbose == 2:
-                for name, param in self.model.named_parameters():
-                    if param.grad is not None:
-                        print(f"Gradients for {name}: {param.grad}")
-            else:
-                print("Warning: Verbose should be 0,1 or 2 only")
+        actor_loss = -(torch.log(action_probs) * actions).sum(dim=1) * advantages
+        critic_loss = advantages.pow(2)
 
-            # Instead of updating the model, you can now copy the gradients to another model
-            
-            self.states, self.actions, self.rewards = [], [], []
-            
-            #print("Replayed neural network, grads: ", self.score)
-        
-        except Exception as e:
-            error_message = f"An error occurred during the replay: {e}\n{traceback.format_exc()}"
-            print(error_message)
-            logging.error(error_message)
-    
+        loss = actor_loss.mean() + critic_loss.mean()
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        self.states, self.actions, self.rewards = [], [], []
+        print("Replayed neural network, score: ",self.score)
 
     def save(self, suffix=""):
-        try:       
-            torch.save(self.model.state_dict(), f"{self.Model_name[:-4]}{suffix}.pth")
-        except Exception as e:
-            error_message = f"Failed to save model: {e}\n{traceback.format_exc()}"
-            print(error_message)
-            logging.error(error_message)
+        print("Saving model...")
+        torch.save(self.model.state_dict(), f"{suffix}{self.Model_name}")
     
     def evaluate_model(self):
+        print("Evaluating model...")
         self.average.append(sum(self.scores[-50:]) / len(self.scores[-50:]))
         
         if __name__ == "__main__":
@@ -225,7 +162,7 @@ class A2C_agent:
                     ax.set_ylabel('Score', fontsize=18)
                     ax.set_xlabel('Steps', fontsize=18)
                     ax.set_title("Episode scores")
-                    fig.savefig(f"{self.Model_name[:-4]}.png")
+                    fig.savefig(f"{self.Save_Path}/{self.Model_name[:-4]}{self.episode}.png")
                     plt.close('all')
                 except OSError as e:
                     print(e)
@@ -282,7 +219,6 @@ class Energyplus_manager:
         self.tc_actuators = {
             'fan_mass_flow_act': ('Fan', 'Fan Air Mass Flow Rate', 'FANSYSTEMMODEL VAV'),  # kg/s
         }
-        
         self.calling_point_for_callback_fxn = EmsPy.available_calling_points[7]  
         self.sim_timesteps = 6  # every 60 / sim_timestep minutes (e.g 10 minutes per timestep)
         self.working_dir = BcaEnv.get_temp_run_dir()
@@ -311,10 +247,10 @@ class Energyplus_manager:
         )
 
     def load_local_model(self, config):
-        
         local_model = A2C_agent(config)
-        if os.path.exists(local_model.Model_name):
-            local_model.model.load_state_dict(torch.load(local_model.Model_name))
+        model_file = f"{local_model.Save_Path}/{local_model.Model_name}.pt"
+        if os.path.exists(model_file):
+            local_model.model.load_state_dict(torch.load(model_file))
         return local_model
 
     def run_episode(self):
@@ -338,7 +274,8 @@ class Energyplus_manager:
             
         self.run_neural_net()
         with self.lock:
-            self.local_a2c_object.update_global(self.global_a2c_object)            
+            self.local_a2c_object.save()
+            self.local_a2c_object.update_global(self.global_a2c_object)
         self.delete_directory()
 
     def run_neural_net(self):
@@ -418,15 +355,21 @@ if __name__ == "__main__":
     pid = os.getpid()
     print("Main process, pid: ", pid)
     config = load_config()
-    CustomManager = BaseManager
-    CustomManager.register('A2C_agent', A2C_agent)   
-    with Manager() as global_manager:
+    mp.set_start_method('spawn')
+    with mp.Manager() as global_manager:
         lock = global_manager.Lock()
-        with CustomManager() as manager:
-            shared_a2c_object = manager.A2C_agent(config)
-            EPISODES = shared_a2c_object.get_EPISODES()
-            with Pool(processes=config['number_of_subprocesses'], maxtasksperchild=3) as pool:
-                for index in range(EPISODES):
-                    pool.apply_async(run_eplus_train_thread, args=(index, config, lock, shared_a2c_object))
-                pool.close()
-                pool.join()
+        shared_a2c_object = A2C_agent(config)
+        EPISODES = shared_a2c_object.get_EPISODES()
+        semaphore = mp.Semaphore(config['number_of_subprocesses'])
+
+        processes = []
+        for index in range(EPISODES):
+            semaphore.acquire()
+            p = mp.Process(target=run_eplus_train_thread, args=(index, config, lock, shared_a2c_object))
+            p.start()
+            processes.append(p)
+            p.join()  # Ensure each process completes before starting the next one
+            semaphore.release()
+
+        for p in processes:
+            p.join()
