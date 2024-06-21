@@ -161,7 +161,14 @@ class Energyplus_manager:
         state[7] = state[7] / 100
         state[8] = (state[8] + 10) / 20
         return state
-        
+    
+    def remember(self, state, action, reward):
+        self.states.append(state)
+        action_onehot = np.zeros([self.action_size])
+        action_onehot[action] = 1
+        self.actions.append(action_onehot)
+        self.rewards.append(reward)
+
     def delete_directory(self, temp_folder_name=""):
         directory_path = os.path.join(self.working_dir, temp_folder_name)
         if os.path.exists(directory_path):
