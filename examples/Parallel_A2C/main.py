@@ -2,11 +2,12 @@ import time
 import os
 import copy
 import logging
-from multiprocessing import Pool, Manager
+from multiprocessing import Pool, Manager, queues
 from utils import load_config
 from eplus_manager import Energyplus_manager
 from policy import Policy
 from a2c import A2C_trainer
+import numpy as np
 
 def setup_logging():
     logging.basicConfig(
@@ -20,10 +21,10 @@ def setup_logging():
 
 def run_eplus_experience_harvesting(queue, episode, global_policy, config):
     pid = os.getpid()
-    logging.info(f"Experience harvesting process number: {episode}, pid: {pid}")
+    logging.debug(f"Experience harvesting process number: {episode}, pid: {pid}")
     try:
         while True:
-            if queue.qsize() < config['max_queue_size']:
+            if queue.qsize() < config['queue_size_max']:
                 break
             time.sleep(0.1)  # Wait for the queue to have space
 
@@ -32,43 +33,53 @@ def run_eplus_experience_harvesting(queue, episode, global_policy, config):
         eplus_object = Energyplus_manager(episode, control_policy, config)
         eplus_object.run_episode()
 
-        queue.put(eplus_object.episode_reward)
+        episode_experience = {
+            'episode': episode,
+            'states': eplus_object.states,
+            'actions': eplus_object.actions,
+            'rewards': eplus_object.rewards
+        }
 
-        logging.info(f"Episode {episode} completed with reward: {eplus_object.episode_reward}")
+        queue.put(episode_experience)
+
+        logging.debug(f"Episode {episode} completed with reward: {np.sum(eplus_object.rewards)}")
     except Exception as e:
         logging.error(f"Error in episode {episode}: {e}")
 
+
 def global_policy_process(queue, a2c_object):
     pid = os.getpid()
-    logging.info(f"Global policy process, pid: {pid}")
-    max_number_of_episodes = a2c_object.config['max_number_of_episodes']
+    logging.debug(f"Global policy process, pid: {pid}")
+    max_number_of_episodes = a2c_object.config['number_of_episodes']
     
     while True:
         try:
             experience_batch = queue.get(timeout=5)  # timeout to allow periodic checks
-        except queue.Empty:
+        except queues.Empty:
             continue  # No message, loop again
-        
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            continue
+
         try:
-            # Assuming experience_batch has an attribute 'episode' that stores the episode number
-            if experience_batch.episode >= max_number_of_episodes:
-                logging.info(f"Reached max number of episodes: {experience_batch.episode}")
+            if experience_batch['episode'] >= max_number_of_episodes:
+                logging.info(f"Reached max number of episodes: {experience_batch['episode']}")
                 break
             
             # Update the global policy with the experience batch
             a2c_object.update(experience_batch)
+            
         except Exception as e:
             logging.error(f"Error processing experience batch: {e}")
-            # Optionally, you can choose to break the loop or handle the error differently
 
     logging.info("Shutting down global policy process")
+
 
 def main():
     pid = os.getpid()
 
     setup_logging()
     logging.info(f"Main process, pid: {pid}")
-    print(f"Main process, pid: {pid}", flush=True)
 
     config = load_config()
     pool_size = config['number_of_subprocesses']
@@ -81,13 +92,10 @@ def main():
 
     with Pool(processes=pool_size, maxtasksperchild=3) as pool:
         results = []
-        
-        print("Starting global policy process", flush=True)
         logging.info("Starting global policy process")
         result = pool.apply_async(global_policy_process, args=(experience_queue, a2c_object))
         results.append(result)
 
-        print("Starting experience harvesting processes", flush=True)
         logging.info("Starting experience harvesting processes")
         for index in range(EPISODES):
             result = pool.apply_async(run_eplus_experience_harvesting, args=(experience_queue, index, global_policy, config))
@@ -101,7 +109,6 @@ def main():
             result.get()  # This will raise exceptions if any occurred during execution
 
     logging.info("All subprocesses have completed.")
-    print("All subprocesses have completed.", flush=True)
 
 if __name__ == "__main__":
     setup_logging()

@@ -15,7 +15,8 @@ def load_config(config_file='config.ini'):
         'state_size': tuple(map(int, config['DEFAULT']['state_size'].split(','))),
         'action_size': config.getint('DEFAULT', 'action_size'),
         'learning_rate': config.getfloat('DEFAULT', 'learning_rate'),
-        'model_path': config['DEFAULT']['model_path']
+        'model_path': config['DEFAULT']['model_path'],
+        'queue_size_max' : config.getint('DEFAULT', 'queue_size_max')
     }
     
     return config_dict

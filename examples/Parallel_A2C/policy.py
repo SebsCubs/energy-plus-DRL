@@ -24,6 +24,7 @@ class Policy(nn.Module):
         return action_probs, state_value
     
     def act(self, state):
+        #It is recommended that the state is normalized and preprocessed implementing any embeddings that are deemed fit.
         state = torch.FloatTensor(state).unsqueeze(0)
         with torch.no_grad():
             action_probs, _ = self(state)

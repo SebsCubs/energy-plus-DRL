@@ -2,11 +2,12 @@ import logging
 import os
 import sys
 import traceback
+import matplotlib
+matplotlib.use('Agg')  # For saving in a headless program. Must be before importing matplotlib.pyplot or pylab!
 from matplotlib import pyplot as plt
 import numpy as np
 import torch.optim as optim
 import torch
-import torch.nn as nn
 
 class A2C_trainer:
     def __init__(self, actor_critic_policy, config):
@@ -18,8 +19,8 @@ class A2C_trainer:
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
         self.states, self.actions, self.rewards = [], [], []
         self.scores, self.episodes, self.average = [], [], []
-        self.score = 0
         self.episode = 0
+        self.score = 0
         self.EPISODES = config['number_of_episodes']
         self.max_average = -99999999999
         self.Save_Path = 'Models'
@@ -43,10 +44,10 @@ class A2C_trainer:
 
     def replay(self, experience):
         try:
-            states = torch.FloatTensor(np.vstack(experience.states))
-            actions = torch.FloatTensor(np.vstack(experience.actions))
-            self.score = np.sum(experience.rewards)
-            discounted_r = torch.FloatTensor(self.discount_rewards(experience.rewards))
+            states = torch.FloatTensor(np.vstack(experience['states']))
+            actions = torch.FloatTensor(np.vstack(experience['actions']))
+            self.score = np.sum(experience['rewards'])
+            discounted_r = torch.FloatTensor(self.discount_rewards(experience['rewards']))
             action_probs, values = self.model(states)
             values = values.squeeze()
             action_probs = torch.gather(action_probs, 1, actions.long())
@@ -107,15 +108,22 @@ class A2C_trainer:
             SAVING = "SAVING"
         else:
             SAVING = ""
-        print("episode: {}/{}, score: {}, average: {:.2f}, max average:{:.2f} {}".format(self.episode, self.EPISODES, self.scores[-1], self.average[-1],self.max_average, SAVING))
+        logging.info("episode: {}/{}, score: {}, average: {:.2f}, max average:{:.2f} {}".format(self.episode, self.EPISODES, self.scores[-1], self.average[-1],self.max_average, SAVING))
 
         return self.average[-1]
 
-    ## Entry point for A2C algo ##
     def update(self, experience):
-        #Experiences contain: states, actions and rewards -> a big tensor containing all for an episode
-        self.replay(experience)
-        self.episode += 1
-        self.episodes.append(self.episode)
-        self.scores.append(self.score)
-        self.evaluate_model()
+        """
+        Update the model using the provided experience.
+        :param experience: Dictionary containing 'states', 'actions', 'rewards', and 'episode'
+        """
+        try:
+            self.replay(experience)
+            self.episode = experience['episode']
+            self.episodes.append(self.episode)
+            self.scores.append(self.score)
+            self.evaluate_model()
+        except Exception as e:
+            error_message = f"An error occurred during update: {e}\n{traceback.format_exc()}"
+            print(error_message)
+            logging.error(error_message)
