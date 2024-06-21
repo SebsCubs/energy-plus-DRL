@@ -31,50 +31,55 @@ class A2C_trainer:
 
 
        
-    def discount_rewards(self, reward):
+    def discount_rewards(self, rewards):
         gamma = 0.99
         running_add = 0
-        discounted_r = np.zeros_like(reward)
-        for i in reversed(range(0, len(reward))):
-            running_add = running_add * gamma + reward[i]
+        discounted_r = np.zeros_like(rewards)
+        for i in reversed(range(0, len(rewards))):
+            running_add = running_add * gamma + rewards[i]
             discounted_r[i] = running_add
         discounted_r -= np.mean(discounted_r)
-        discounted_r /= np.std(discounted_r)
+        discounted_r /= np.std(discounted_r) + 1e-10  # Add epsilon to avoid division by zero
         return discounted_r
 
     def replay(self, experience):
         try:
+            # Convert experience data to tensors
             states = torch.FloatTensor(np.vstack(experience['states']))
-            actions = torch.FloatTensor(np.vstack(experience['actions']))
+            actions = torch.LongTensor(np.vstack(experience['actions']))
             self.score = np.sum(experience['rewards'])
             discounted_r = torch.FloatTensor(self.discount_rewards(experience['rewards']))
+            
+            # Forward pass to get action probabilities and values
             action_probs, values = self.model(states)
             values = values.squeeze()
-            action_probs = torch.gather(action_probs, 1, actions.long())
+            
+            # Ensure action_probs and actions have compatible shapes
+            action_probs = action_probs.gather(1, actions)
+            
+            # Calculate advantages
             advantages = discounted_r - values
-            actor_loss = -(torch.log(action_probs) * actions).sum(dim=1) * advantages
-            critic_loss = advantages.pow(2)
-            loss = actor_loss.mean() + critic_loss.mean()
+            
+            # Calculate actor and critic loss
+            actor_loss = -((torch.log(action_probs) * actions).sum(dim=1) * advantages).mean()
+            #actor_loss = -(torch.log(action_probs) * advantages).sum(dim=1).mean()
+            critic_loss = advantages.pow(2).mean()
+            
+            # Backpropagation
+            loss = actor_loss + critic_loss
             self.optimizer.zero_grad()
             loss.backward()
-            if self.verbose == 0:
-                pass
-            elif self.verbose == 1:
-                pass
-            elif self.verbose == 2:
-                for name, param in self.model.named_parameters():
-                    if param.grad is not None:
-                        print(f"Gradients for {name}: {param.grad}")
-            else:
-                print("Warning: Verbose should be 0, 1 or 2 only")
-
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=0.5)  # Gradient clipping
             self.optimizer.step()
-
+            
+            # Clear states, actions, and rewards
             self.states, self.actions, self.rewards = [], [], []
+            
         except Exception as e:
             error_message = f"An error occurred during the replay: {e}\n{traceback.format_exc()}"
             print(error_message)
             logging.error(error_message)
+
     
     def save(self, suffix=""):
         try:       

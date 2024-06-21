@@ -122,29 +122,44 @@ class Energyplus_manager:
         self.rewards.append(reward)
 
     def reward_function(self):
-        nomalized_setpoint = (21 - 18) / 17
-        alpha = 1
-        beta = 1
-        reward = - (alpha * abs(nomalized_setpoint - self.a2c_state[1]) + beta * self.a2c_state[3])
-        return reward
+        try:
+            nomalized_setpoint = (21 - 18) / 17
+            alpha = 1
+            beta = 1
+            reward = - (alpha * abs(nomalized_setpoint - self.a2c_state[1]) + beta * self.a2c_state[3])
+            logging.debug(f"Calculated reward: {reward}")
+            return reward
+        except Exception as e:
+            logging.error(f"Error in reward_function: {e}")
+            raise
 
     def normalize_state(self, state):
-        state[0] = state[0] / 24
-        state[1] = (state[1] - 18) / 17
-        state[2] = state[2] / 2.18
-        state[3] = state[3] / 3045.81
-        state[4] = (state[4] - 15) / 15
-        state[5] = state[5] / 35
-        state[6] = state[6] / 100
-        state[7] = state[7] / 100
-        state[8] = (state[8] + 10) / 20
-        return state
+        try:
+            assert len(state) == 9, "State vector length is not 9"
+            state[0] = state[0] / 24
+            state[1] = (state[1] - 18) / 17
+            state[2] = state[2] / 2.18
+            state[3] = state[3] / 3045.81
+            state[4] = (state[4] - 15) / 15
+            state[5] = state[5] / 35
+            state[6] = state[6] / 100
+            state[7] = state[7] / 100
+            state[8] = (state[8] + 10) / 20
+            logging.debug(f"Normalized state: {state}")
+            return state
+        except Exception as e:
+            logging.error(f"Error in normalize_state: {e}")
+            raise
 
-    def get_state(self, var_data, weather_data):   
-        self.time_of_day = self.sim.get_ems_data(['t_hours'])
-        weather_data = list(weather_data.values())[:2]
-        state = np.concatenate((np.array([self.time_of_day]), var_data, weather_data)) 
-        return self.normalize_state(state)
+    def get_state(self, var_data, weather_data):
+        try:
+            self.time_of_day = self.sim.get_ems_data(['t_hours'])
+            weather_data = list(weather_data.values())[:2]
+            state = np.concatenate((np.array([self.time_of_day]), var_data, weather_data))
+            return self.normalize_state(state)
+        except Exception as e:
+            logging.error(f"Error in get_state: {e}")
+            raise
     
     def observation_function(self):
         self.time = self.sim.get_ems_data(['t_datetimes'])
