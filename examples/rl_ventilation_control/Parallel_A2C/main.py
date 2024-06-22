@@ -3,7 +3,7 @@ import os
 import copy
 import logging
 from multiprocessing import Pool, Manager, queues
-from utils import load_config
+from eplus_drl.utils import load_config
 from eplus_manager import Energyplus_manager
 from policy import Policy
 from a2c import A2C_trainer

@@ -1,10 +1,3 @@
-# -- FILE PATHS -- (modify these to your local paths, This format should be OS agnostic, can use any kind of slash) #
-#ep_path = r'C:\EnergyPlusV22-1-0'  # path to E+ on system (Windows example)
-ep_path = r"/usr/local/EnergyPlus-22-1-0" #(Linux example)
-idf_file_name = r"sdu_damper_all_rooms.idf"  # building energy model (BEM) IDF file
-ep_weather_path = r"DNK_Copenhagen.061800_IWEC.epw"  # EPW weather file
-cvs_output_path = r"Dataframes/dataframes_output_test.csv" # Output .csv Path
-
 """
 Author: Sebastian Cubides (SebsCubs)
 """
@@ -13,17 +6,15 @@ from eplus_drl import BcaEnv, EmsPy
 import datetime
 import matplotlib.pyplot as plt
 import tkinter
+from eplus_drl.utils import load_config
 
-# STATE SPACE (& Auxiliary Simulation Data)
-
-zn0 = 'Thermal Zone 1' #name of the zone to control 
-tc_intvars = {}  # empty, don't need any
+config = load_config()
 
 tc_vars = {
     # Building
     #'hvac_operation_sched': ('Schedule Value', 'HtgSetp 1'),  # is building 'open'/'close'?
     # -- Zone 0 (Core_Zn) --
-    'zn0_temp': ('Zone Air Temperature', zn0),  # deg C
+    'zn0_temp': ('Zone Air Temperature', 'Thermal Zone 1'),  # deg C
     'air_loop_fan_mass_flow_var' : ('Fan Air Mass Flow Rate','FANSYSTEMMODEL VAV'),  # kg/s
     'air_loop_fan_electric_power' : ('Fan Electricity Rate','FANSYSTEMMODEL VAV'),
     're_heating_vav_coil_htgrate' : ('Heating Coil Heating Rate','Changeover Bypass HW Rht Coil'),  # deg C
@@ -36,9 +27,6 @@ tc_vars = {
     'deck_temp' : ('System Node Temperature','Node 30'),
     'post_deck_temp' : ('System Node Temperature','Node 13'),
 }
-
-tc_meters = {} # empty, don't need any
-
 tc_weather = {
     'oa_rh': ('outdoor_relative_humidity'),  # %RH
     'oa_db': ('outdoor_dry_bulb'),  # deg C
@@ -50,21 +38,19 @@ tc_weather = {
     'wind_speed': ('wind_speed')  # m/s
 }
 
-# ACTION SPACE
-tc_actuators = {
-    # HVAC Control Setpoints
-    #'zn0_cooling_sp': ('Zone Temperature Control', 'Cooling Setpoint', zn0),  # deg C
-    #'zn0_heating_sp': ('Zone Temperature Control', 'Heating Setpoint', zn0),
-    #'air_loop_fan_mass_flow_actuator' : ('Fan','Fan Air Mass Flow Rate','FanSystemModel ConstantVolume')  # kg/s
-}
+tc_meters = {} # empty, don't need any
+tc_intvars = {}  # empty, don't need any
+tc_actuators = {} # empty, don't need any
+
+
 # -- Simulation Params --
 calling_point_for_callback_fxn = EmsPy.available_calling_points[7]  # 6-16 valid for timestep loop during simulation
 sim_timesteps = 6  # every 60 / sim_timestep minutes (e.g 10 minutes per timestep)
 
 # -- Create Building Energy Simulation Instance --
 sim = BcaEnv(
-    ep_path=ep_path,
-    ep_idf_to_run=idf_file_name,
+    ep_path=config['ep_path'],
+    ep_idf_to_run=config['idf_file_name'],
     timesteps=sim_timesteps,
     tc_vars=tc_vars,
     tc_intvars=tc_intvars,
@@ -162,18 +148,18 @@ sim.set_calling_point_and_callback_function(
 
 # -- RUN BUILDING SIMULATION --
 
-sim.run_env(ep_weather_path)
+sim.run_env(config['ep_weather_path'])
 sim.reset_state()  # reset when done
 
 
    
 # -- Sample Output Data --
-output_dfs = sim.get_df(to_csv_file=cvs_output_path)  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)
+output_dfs = sim.get_df(to_csv_file=config['cvs_output_path'])  # LOOK at all the data collected here, custom DFs can be made too, possibility for creating a CSV file (GB in size)
 
 # -- Plot Results --
-fig, ax = plt.subplots()
-output_dfs['var'].plot(y='zn0_temp', use_index=True, ax=ax)
-#output_dfs['var'].plot(y='pmv', use_index=True, ax=ax)
-plt.title('Zone0 temperature')
-plt.show()
-# Analyze results in "out" folder, DView, or directly from your Python variables and Pandas Dataframes
+if config['show_plots']:
+    fig, ax = plt.subplots()
+    output_dfs['var'].plot(y='zn0_temp', use_index=True, ax=ax)
+    #output_dfs['var'].plot(y='pmv', use_index=True, ax=ax)
+    plt.title('Zone0 temperature')
+    plt.show()
