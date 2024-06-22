@@ -80,11 +80,6 @@ class Energyplus_manager:
         shutil.copytree(self.config['ep_path'], self.eplus_copy_path)
         self.calling_point_for_callback_fxn = EmsPy.available_calling_points[7]
         self.sim_timesteps = 6
-        self.working_dir = BcaEnv.get_temp_run_dir()
-        self.directory_name = "Energyplus_temp"
-        self.eplus_copy_path = os.path.join(self.working_dir, self.directory_name)
-        self.delete_directory(self.directory_name)
-        shutil.copytree(self.config['ep_path'], self.eplus_copy_path)
 
         #Simulation object (sim):
         self.sim = BcaEnv(
@@ -186,6 +181,7 @@ class Energyplus_manager:
     def run_simulation(self): 
         out_dir = os.path.join(self.working_dir, 'out') 
         self.sim.run_env(self.config['ep_weather_path'], out_dir)
+        
     
     def silence_simulation(self):
         devnull = open(os.devnull, 'w')

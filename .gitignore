@@ -17,6 +17,7 @@
 *.so
 *.so.*
 *~
+*.out
 .directory
 .DS_Store
 

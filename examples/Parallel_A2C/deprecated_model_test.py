@@ -35,11 +35,10 @@ model_path = config['DEFAULT']['model_path']
 
 # STATE SPACE (& Auxiliary Simulation Data)
 
-zn0 = 'Thermal Zone 1' #name of the zone to control 
 tc_intvars = {}  # empty, don't need any
 
 tc_vars = {
-    'zn0_temp': ('Zone Air Temperature', zn0),  # deg C
+    'zn0_temp': ('Zone Air Temperature', 'Thermal Zone 1'),  # deg C
     'air_loop_fan_mass_flow_var' : ('Fan Air Mass Flow Rate','FANSYSTEMMODEL VAV'),  # kg/s
     'air_loop_fan_electric_power' : ('Fan Electricity Rate','FANSYSTEMMODEL VAV'),  # W
     'deck_temp_setpoint' : ('System Node Setpoint Temperature','Node 30'),  # deg C
