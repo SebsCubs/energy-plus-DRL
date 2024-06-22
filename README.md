@@ -129,6 +129,13 @@ Where m_fan is the air mass flow rate of the main fan, a agent is the network's 
 
 Where SP1 is the room's temperature setpoint, T_indoor is the actual room's temperature and P_fan is the fan's power consumption. Effectively trying to minimize the difference between reference and actual room temperature while also minimizing the fan's electricity consumption.
 
+The implementation of all of this concepts can be found in the example folder: [ParallelA2C](https://github.com/SebsCubs/eplus_drl/tree/main/examples/rl_ventilation_control/Parallel_A2C)
+Where
+- [main.py](https://github.com/SebsCubs/eplus_drl/blob/main/examples/rl_ventilation_control/Parallel_A2C/main.py) is the main file to run the example, it contains the gist of the multiprocessing implementation.
+- [policy.py](https://github.com/SebsCubs/eplus_drl/blob/main/examples/rl_ventilation_control/Parallel_A2C/policy.py) contains the agent's network (actor and critic) and the act() method
+- [eplus_manager.py](https://github.com/SebsCubs/eplus_drl/blob/main/examples/rl_ventilation_control/Parallel_A2C/eplus_manager.py) contains the energyplus environment to run simulations and harvest experience data from the model interactions to train the global policy it contains the reward function.
+- [a2c.py](https://github.com/SebsCubs/eplus_drl/blob/main/examples/rl_ventilation_control/Parallel_A2C/a2c.py) contains the implementation of the A2C algorithm and is the instance containing the global policy. It receives the experience data and runs training.
+
 6. Train and testing
 
 Agent is still training :-) 
